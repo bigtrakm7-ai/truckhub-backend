@@ -208,13 +208,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.ENV == "dev" else [
-        "https://truckhub-frontend-rfj0vzqox-bigtrakm7-6887s-projects.vercel.app",
-        "https://truckhub-frontend-phi.vercel.app",
-        "https://truckhub.vercel.app",
-        "http://localhost:5173",
-        "http://localhost:3000"
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
