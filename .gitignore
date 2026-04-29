@@ -4,4 +4,8 @@ __pycache__/
 *.db
 .venv/
 venv/
+lib/
+*.modebak
+*.modefixbak
+*.modefinalbak
 
