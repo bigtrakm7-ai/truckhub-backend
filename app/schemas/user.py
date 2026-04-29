@@ -1,0 +1,47 @@
+from datetime import datetime
+from typing import List, Optional
+
+from pydantic import BaseModel, EmailStr
+from datetime import datetime
+from app.core.enums import UserRole
+
+
+class UserBase(BaseModel):
+    email: EmailStr
+    phone: Optional[str] = None
+    role: UserRole = UserRole.BUYER
+
+
+class UserCreate(UserBase):
+    password: str
+    company_name: Optional[str] = None
+    inn: Optional[str] = None
+
+
+class UserUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    company_name: Optional[str] = None
+    inn: Optional[str] = None
+    address: Optional[str] = None
+
+
+class UserResponse(UserBase):
+    id: str
+    is_active: bool
+    is_verified: bool
+    company_name: Optional[str] = None
+    available_roles: List[UserRole] = []
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class TokenData(BaseModel):
+    user_id: Optional[str] = None

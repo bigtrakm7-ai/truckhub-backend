@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: truckhub-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: truckhub-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: "https://truckhub.vercel.app,https://www.truckhub.vercel.app"
+
+  - type: redis
+    name: truckhub-redis
+    ipAllowList: []
+
+databases:
+  - name: truckhub-db
+    databaseName: truckhub
+    user: truckhub
