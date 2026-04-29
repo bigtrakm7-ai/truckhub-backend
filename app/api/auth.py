@@ -211,11 +211,42 @@ async def request_password_reset(
         "expires": __import__("datetime").datetime.utcnow() + __import__("datetime").timedelta(minutes=15)
     }
     
-    # In production, send email here
-    # For now, just print to console
-    print(f"\n{'='*50}")
-    print(f"PASSWORD RESET CODE for {data.email}: {reset_code}")
-    print(f"{'='*50}\n")
+    # Send email with reset code
+    try:
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "TruckGrad - Код восстановления пароля"
+        msg["From"] = "noreply@truckgrad.ru"
+        msg["To"] = data.email
+        
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background: #f4f6fa; padding: 40px;">
+          <div style="max-width: 480px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+            <h2 style="color: #1e40af; margin-top: 0;">TruckGrad</h2>
+            <p>Вы запросили восстановление пароля.</p>
+            <p>Ваш код подтверждения:</p>
+            <div style="font-size: 32px; font-weight: bold; color: #1e40af; text-align: center; padding: 20px; background: #eef2ff; border-radius: 8px; letter-spacing: 6px;">
+              {reset_code}
+            </div>
+            <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">Код действителен 15 минут. Если вы не запрашивали восстановление — проигнорируйте это письмо.</p>
+          </div>
+        </body>
+        </html>
+        """
+        
+        msg.attach(MIMEText(html, "html"))
+        
+        with smtplib.SMTP_SSL("smtp.beget.com", 465) as server:
+            server.login("noreply@truckgrad.ru", "MfUYcRPBZM&5")
+            server.sendmail("noreply@truckgrad.ru", data.email, msg.as_string())
+        
+        print(f"Reset code sent to {data.email}")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
     
     return {"message": "If email exists, reset code will be sent"}
 
