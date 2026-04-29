@@ -211,16 +211,9 @@ async def request_password_reset(
         "expires": __import__("datetime").datetime.utcnow() + __import__("datetime").timedelta(minutes=15)
     }
     
-    # Send email with reset code
+    # Send email with reset code via Resend API
     try:
-        import smtplib
-        from email.mime.text import MIMEText
-        from email.mime.multipart import MIMEMultipart
-        
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = "TruckGrad - Код восстановления пароля"
-        msg["From"] = "noreply@truckgrad.ru"
-        msg["To"] = data.email
+        import httpx
         
         html = f"""
         <html>
@@ -238,13 +231,17 @@ async def request_password_reset(
         </html>
         """
         
-        msg.attach(MIMEText(html, "html"))
-        
-        with smtplib.SMTP_SSL("smtp.beget.com", 465) as server:
-            server.login("noreply@truckgrad.ru", "MfUYcRPBZM&5")
-            server.sendmail("noreply@truckgrad.ru", data.email, msg.as_string())
-        
-        print(f"Reset code sent to {data.email}")
+        resp = httpx.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": "Bearer re_CVdS3GVk_Echch2ewCPcqKGzSSWKEZ5Jd"},
+            json={
+                "from": "TruckGrad <onboarding@resend.dev>",
+                "to": [data.email],
+                "subject": "TruckGrad - Код восстановления пароля",
+                "html": html,
+            }
+        )
+        print(f"Resend response: {resp.status_code} {resp.text}")
     except Exception as e:
         print(f"Failed to send email: {e}")
     
