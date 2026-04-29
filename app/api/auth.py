@@ -235,7 +235,7 @@ async def request_password_reset(
             "https://api.resend.com/emails",
             headers={"Authorization": "Bearer re_CVdS3GVk_Echch2ewCPcqKGzSSWKEZ5Jd"},
             json={
-                "from": "TruckGrad <onboarding@resend.dev>",
+                "from": "TruckGrad <noreply@truckgrad.ru>",
                 "to": [data.email],
                 "subject": "TruckGrad - Код восстановления пароля",
                 "html": html,
