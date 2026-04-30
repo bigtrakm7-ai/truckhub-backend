@@ -1,9 +1,4 @@
 """Seed database with truck parts catalog data"""
-import asyncio
-import uuid
-from app.core.database import async_session, engine, Base
-from app.models.product import Product, Category, Brand, StockStatus, ProductType
-from app.models.supplier import Supplier
 
 CATEGORIES = [
     {"id": "cat-engine", "name": "Двигатель", "slug": "dvigatel", "description": "Запчасти для двигателя грузовиков"},
@@ -128,72 +123,3 @@ PRODUCTS = [
     {"article": "81.25101.6451", "name": "Фонарь задний MAN", "category_id": "cat-lighting", "brand_id": "brand-man", "price": 8900, "stock_quantity": 14, "applicability": "MAN TGA, MAN TGS, MAN TGX"},
     {"article": "1684865", "name": "Противотуманная фара DAF", "category_id": "cat-lighting", "brand_id": "brand-daf", "price": 5200, "stock_quantity": 18, "applicability": "DAF XF95, DAF XF105, DAF CF"},
 ]
-
-
-async def seed():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    
-    async with async_session() as session:
-        # Check if already seeded
-        result = await session.execute(select(func.count(Product.id)))
-        count = result.scalar()
-        if count and count > 0:
-            print(f"Database already has {count} products. Skipping seed.")
-            return
-        
-        # Create categories
-        for cat_data in CATEGORIES:
-            cat = Category(**cat_data)
-            session.add(cat)
-        
-        # Create brands
-        for brand_data in BRANDS:
-            brand = Brand(**brand_data)
-            session.add(brand)
-        
-        # Create suppliers
-        for sup_data in SUPPLIERS:
-            sup = Supplier(
-                id=sup_data["id"],
-                name=sup_data["name"],
-                slug=sup_data["slug"],
-                city=sup_data["city"],
-                rating=sup_data["rating"],
-                is_verified=True,
-                is_active=True,
-            )
-            session.add(sup)
-        
-        await session.flush()
-        
-        # Create products
-        import random
-        for i, prod_data in enumerate(PRODUCTS):
-            supplier = SUPPLIERS[i % len(SUPPLIERS)]
-            product = Product(
-                id=f"prod-{uuid.uuid4().hex[:8]}",
-                article=prod_data["article"],
-                name=prod_data["name"],
-                description=f"{prod_data['name']}. Применимость: {prod_data.get('applicability', '')}",
-                category_id=prod_data["category_id"],
-                brand_id=prod_data["brand_id"],
-                supplier_id=supplier["id"],
-                price=prod_data["price"],
-                old_price=prod_data.get("old_price"),
-                stock_quantity=prod_data["stock_quantity"],
-                stock_status=StockStatus.IN_STOCK if prod_data["stock_quantity"] > 0 else StockStatus.OUT_OF_STOCK,
-                product_type=ProductType.ORIGINAL,
-                is_premium=prod_data["price"] > 30000,
-                is_active=True,
-                applicability=prod_data.get("applicability", ""),
-            )
-            session.add(product)
-        
-        await session.commit()
-        print(f"Seeded: {len(CATEGORIES)} categories, {len(BRANDS)} brands, {len(SUPPLIERS)} suppliers, {len(PRODUCTS)} products")
-
-
-if __name__ == "__main__":
-    from sqlalchemy import func
-    asyncio.run(seed())
