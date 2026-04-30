@@ -198,8 +198,7 @@ async def request_password_reset(
     user = result.scalar_one_or_none()
     
     if not user:
-        # Don't reveal if email exists
-        return {"message": "If email exists, reset code will be sent"}
+        raise HTTPException(status_code=404, detail="Аккаунт с такой почтой не найден. Пожалуйста, зарегистрируйтесь.")
     
     # Generate simple reset code (6 digits)
     import random
