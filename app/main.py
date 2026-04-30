@@ -45,91 +45,57 @@ async def seed_demo_data():
         if products_count > 0:
             return
 
-        supplier = Supplier(
-            id=str(uuid4()),
-            company_name="TruckHub Demo Supplier",
-            inn="7701000000",
-            address="Москва",
-            warehouse_address="Московская область",
-            is_verified=True,
-            rating=4.8,
-            balance=0.0,
-            commission_rate=0.05,
-        )
+        from seed_data import CATEGORIES, BRANDS, SUPPLIERS, PRODUCTS
+        import random
 
-        category = Category(
-            id=str(uuid4()),
-            name="Двигатель",
-            slug="engine",
-            description="Детали двигателя для грузовых автомобилей",
-        )
+        # Categories
+        for cat_data in CATEGORIES:
+            session.add(Category(**cat_data))
 
-        brand = Brand(
-            id=str(uuid4()),
-            name="Cummins",
-            slug="cummins",
-            country="USA",
-        )
+        # Brands
+        for brand_data in BRANDS:
+            session.add(Brand(**brand_data))
 
-        session.add_all([supplier, category, brand])
+        # Suppliers
+        for j, sup_data in enumerate(SUPPLIERS):
+            session.add(Supplier(
+                id=sup_data["id"],
+                company_name=sup_data["name"],
+                inn=f"770100000{j}",
+                address=sup_data["city"],
+                warehouse_address=sup_data["city"],
+                is_verified=True,
+                rating=sup_data["rating"],
+                balance=0.0,
+                commission_rate=0.05,
+            ))
+
         await session.flush()
 
-        demo_products = [
-            Product(
+        # Products
+        for i, prod_data in enumerate(PRODUCTS):
+            supplier = SUPPLIERS[i % len(SUPPLIERS)]
+            product = Product(
                 id=str(uuid4()),
-                article="250621OEM",
-                name="Комплект прокладок двигателя Cummins ISX",
-                description="Набор оригинальных прокладок для сервисного ремонта двигателя Cummins ISX.",
-                category_id=category.id,
-                brand_id=brand.id,
-                supplier_id=supplier.id,
-                price=12500,
-                old_price=13900,
-                stock_quantity=14,
-                stock_status=StockStatus.IN_STOCK,
+                article=prod_data["article"],
+                name=prod_data["name"],
+                description=f"{prod_data['name']}. Применимость: {prod_data.get('applicability', '')}",
+                category_id=prod_data["category_id"],
+                brand_id=prod_data["brand_id"],
+                supplier_id=supplier["id"],
+                price=prod_data["price"],
+                old_price=prod_data.get("old_price"),
+                stock_quantity=prod_data["stock_quantity"],
+                stock_status=StockStatus.IN_STOCK if prod_data["stock_quantity"] > 0 else StockStatus.OUT_OF_STOCK,
                 product_type=ProductType.ORIGINAL,
-                is_premium=True,
+                is_premium=prod_data["price"] > 30000,
                 is_active=True,
-                applicability="Cummins ISX, ISX15, тягачи и магистральные грузовики",
-            ),
-            Product(
-                id=str(uuid4()),
-                article="P551315",
-                name="Фильтр масляный Donaldson P551315",
-                description="Фильтр для регулярного технического обслуживания грузового транспорта.",
-                category_id=category.id,
-                brand_id=brand.id,
-                supplier_id=supplier.id,
-                price=1700,
-                old_price=1950,
-                stock_quantity=48,
-                stock_status=StockStatus.IN_STOCK,
-                product_type=ProductType.ANALOG,
-                is_premium=False,
-                is_active=True,
-                applicability="Cummins, Freightliner, Kenworth, Peterbilt",
-            ),
-            Product(
-                id=str(uuid4()),
-                article="FH12-BRK-204",
-                name="Колодки тормозные Volvo FH/FM комплект",
-                description="Комплект тормозных колодок для коммерческих грузовиков Volvo.",
-                category_id=category.id,
-                brand_id=brand.id,
-                supplier_id=supplier.id,
-                price=8900,
-                old_price=9400,
-                stock_quantity=9,
-                stock_status=StockStatus.IN_STOCK,
-                product_type=ProductType.ANALOG,
-                is_premium=False,
-                is_active=True,
-                applicability="Volvo FH12, FM12, FMX",
-            ),
-        ]
+                applicability=prod_data.get("applicability", ""),
+            )
+            session.add(product)
 
-        session.add_all(demo_products)
         await session.commit()
+        logger.info(f"Seeded {len(PRODUCTS)} products, {len(CATEGORIES)} categories, {len(BRANDS)} brands")
 
 
 async def normalize_legacy_user_roles():
