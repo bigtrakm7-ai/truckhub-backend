@@ -40,63 +40,8 @@ logger = get_logger(__name__)
 
 
 async def seed_demo_data():
-    async with async_session_maker() as session:
-        products_count = await session.scalar(select(func.count(Product.id))) or 0
-        if products_count > 0:
-            return
-
-        import sys, os
-        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        from seed_data import CATEGORIES, BRANDS, SUPPLIERS, PRODUCTS
-
-        # Categories
-        for cat_data in CATEGORIES:
-            session.add(Category(**cat_data))
-
-        # Brands
-        for brand_data in BRANDS:
-            session.add(Brand(**brand_data))
-
-        # Suppliers
-        for j, sup_data in enumerate(SUPPLIERS):
-            session.add(Supplier(
-                id=sup_data["id"],
-                company_name=sup_data["name"],
-                inn=f"770100000{j}",
-                address=sup_data["city"],
-                warehouse_address=sup_data["city"],
-                is_verified=True,
-                rating=sup_data["rating"],
-                balance=0.0,
-                commission_rate=0.05,
-            ))
-
-        await session.flush()
-
-        # Products
-        for i, prod_data in enumerate(PRODUCTS):
-            supplier = SUPPLIERS[i % len(SUPPLIERS)]
-            product = Product(
-                id=str(uuid4()),
-                article=prod_data["article"],
-                name=prod_data["name"],
-                description=f"{prod_data['name']}. Применимость: {prod_data.get('applicability', '')}",
-                category_id=prod_data["category_id"],
-                brand_id=prod_data["brand_id"],
-                supplier_id=supplier["id"],
-                price=prod_data["price"],
-                old_price=prod_data.get("old_price"),
-                stock_quantity=prod_data["stock_quantity"],
-                stock_status=StockStatus.IN_STOCK if prod_data["stock_quantity"] > 0 else StockStatus.OUT_OF_STOCK,
-                product_type=ProductType.ORIGINAL,
-                is_premium=prod_data["price"] > 30000,
-                is_active=True,
-                applicability=prod_data.get("applicability", ""),
-            )
-            session.add(product)
-
-        await session.commit()
-        logger.info(f"Seeded {len(PRODUCTS)} products, {len(CATEGORIES)} categories, {len(BRANDS)} brands")
+    """Seed is now triggered via /admin/seed endpoint"""
+    pass
 
 
 async def normalize_legacy_user_roles():
@@ -227,4 +172,58 @@ async def health_check():
 
 @app.get("/")
 async def root():
-    return {"message": "TruckHub API"}
+    return {"message": "TruckGrad API"}
+
+
+@app.post("/admin/seed")
+async def run_seed():
+    """Seed database with catalog data"""
+    async with async_session_maker() as session:
+        products_count = await session.scalar(select(func.count(Product.id))) or 0
+        if products_count > 0:
+            return {"message": f"Already seeded with {products_count} products"}
+
+        import sys, os
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from seed_data import CATEGORIES, BRANDS, SUPPLIERS, PRODUCTS
+
+        for cat_data in CATEGORIES:
+            session.add(Category(**cat_data))
+        for brand_data in BRANDS:
+            session.add(Brand(**brand_data))
+        for j, sup_data in enumerate(SUPPLIERS):
+            session.add(Supplier(
+                id=sup_data["id"],
+                company_name=sup_data["name"],
+                inn=f"770100000{j}",
+                address=sup_data["city"],
+                warehouse_address=sup_data["city"],
+                is_verified=True,
+                rating=sup_data["rating"],
+                balance=0.0,
+                commission_rate=0.05,
+            ))
+        await session.flush()
+
+        for i, prod_data in enumerate(PRODUCTS):
+            supplier = SUPPLIERS[i % len(SUPPLIERS)]
+            session.add(Product(
+                id=str(uuid4()),
+                article=prod_data["article"],
+                name=prod_data["name"],
+                description=f"{prod_data['name']}. Применимость: {prod_data.get('applicability', '')}",
+                category_id=prod_data["category_id"],
+                brand_id=prod_data["brand_id"],
+                supplier_id=supplier["id"],
+                price=prod_data["price"],
+                old_price=prod_data.get("old_price"),
+                stock_quantity=prod_data["stock_quantity"],
+                stock_status=StockStatus.IN_STOCK,
+                product_type=ProductType.ORIGINAL,
+                is_premium=prod_data["price"] > 30000,
+                is_active=True,
+                applicability=prod_data.get("applicability", ""),
+            ))
+
+        await session.commit()
+        return {"message": f"Seeded {len(PRODUCTS)} products, {len(CATEGORIES)} categories, {len(BRANDS)} brands"}
