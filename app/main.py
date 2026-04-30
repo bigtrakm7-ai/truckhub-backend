@@ -111,7 +111,8 @@ async def seed_demo_data():
             await session.commit()
             logger.info(f"Auto-seeded {len(PRODUCTS)} products")
     except Exception as e:
-        logger.error(f"Seed failed: {e}")
+        import traceback
+        logger.error(f"Seed failed: {e}\n{traceback.format_exc()}")
 
 
 async def normalize_legacy_user_roles():
