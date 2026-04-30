@@ -59,7 +59,6 @@ async def seed_demo_data():
                     id=str(uuid4()),
                     email="bigtrakm7@gmail.com",
                     hashed_password=pwd_context.hash("Test12345!"),
-                    full_name="Admin User",
                     role=UserRole.SUPPLIER,
                     is_active=True,
                     is_verified=True,
