@@ -45,8 +45,29 @@ async def seed_demo_data():
         import sys, os
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         from seed_data import CATEGORIES, BRANDS, SUPPLIERS, PRODUCTS
+        from passlib.context import CryptContext
+        from app.models.user import User, UserRole
 
         async with async_session_maker() as session:
+            # Create default user if not exists
+            existing_user = await session.scalar(
+                select(User).where(User.email == "bigtrakm7@gmail.com")
+            )
+            if not existing_user:
+                pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+                session.add(User(
+                    id=str(uuid4()),
+                    email="bigtrakm7@gmail.com",
+                    hashed_password=pwd_context.hash("Test12345!"),
+                    full_name="Admin User",
+                    role=UserRole.SUPPLIER,
+                    is_active=True,
+                    is_verified=True,
+                ))
+                await session.commit()
+                logger.info("Created default user")
+
+            # Seed products if empty
             products_count = await session.scalar(select(func.count(Product.id))) or 0
             if products_count > 0:
                 return
@@ -90,23 +111,6 @@ async def seed_demo_data():
                 ))
             await session.commit()
             logger.info(f"Auto-seeded {len(PRODUCTS)} products")
-
-            # Create default test user
-            from passlib.context import CryptContext
-            pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-            from app.models.user import User, UserRole
-            default_user = User(
-                id=str(uuid4()),
-                email="bigtrakm7@gmail.com",
-                hashed_password=pwd_context.hash("Test12345!"),
-                full_name="Admin User",
-                role=UserRole.SUPPLIER,
-                is_active=True,
-                is_verified=True,
-            )
-            session.add(default_user)
-            await session.commit()
-            logger.info("Created default user")
     except Exception as e:
         logger.error(f"Seed failed: {e}")
 
