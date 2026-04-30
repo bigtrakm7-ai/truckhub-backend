@@ -45,8 +45,9 @@ async def seed_demo_data():
         if products_count > 0:
             return
 
+        import sys, os
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         from seed_data import CATEGORIES, BRANDS, SUPPLIERS, PRODUCTS
-        import random
 
         # Categories
         for cat_data in CATEGORIES:
