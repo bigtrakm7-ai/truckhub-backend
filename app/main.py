@@ -2,7 +2,9 @@ from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import func, select, text
 
 from app.api import (
@@ -29,6 +31,7 @@ from app.api.websocket import router as websocket_router
 from app.api.metrics import router as metrics_router, PrometheusMiddleware
 from app.core.config import settings
 from app.core.database import Base, async_session_maker, engine, get_redis, get_elasticsearch, close_db
+from app.core.messages import Msg
 from app.core.logging import get_logger, setup_logging
 from app.core.security_middleware import RateLimitMiddleware, SecurityHeadersMiddleware, AuditLogMiddleware
 from app.models.product import Brand, Category, Product, ProductType, StockStatus
@@ -189,6 +192,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "Ошибка валидации данных", "errors": exc.errors()},
+    )
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -231,19 +243,19 @@ async def health_check():
     es_client = await get_elasticsearch()
 
     return {
-        "status": "healthy",
+        "status": "работает",
         "env": settings.ENV,
         "version": settings.VERSION,
-        "database": "connected",
-        "redis": "connected" if redis_client else "unavailable",
-        "elasticsearch": "connected" if es_client else "unavailable",
+        "database": "подключена",
+        "redis": "подключён" if redis_client else "недоступен",
+        "elasticsearch": "подключён" if es_client else "недоступен",
         "providers": integration_service.providers_health(),
     }
 
 
 @app.get("/")
 async def root():
-    return {"message": "TruckGrad API"}
+    return {"message": "API TruckGrad"}
 
 
 @app.post("/admin/seed")
@@ -252,7 +264,7 @@ async def run_seed():
     async with async_session_maker() as session:
         products_count = await session.scalar(select(func.count(Product.id))) or 0
         if products_count > 0:
-            return {"message": f"Already seeded with {products_count} products"}
+            return {"message": Msg.already_seeded(products_count)}
 
         import sys, os
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -297,4 +309,4 @@ async def run_seed():
             ))
 
         await session.commit()
-        return {"message": f"Seeded {len(PRODUCTS)} products, {len(CATEGORIES)} categories, {len(BRANDS)} brands"}
+        return {"message": Msg.seed_completed(len(PRODUCTS), len(CATEGORIES), len(BRANDS))}

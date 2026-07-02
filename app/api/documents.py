@@ -30,8 +30,9 @@ from app.core.database import get_db
 from app.core.enums import OrderStatus
 from app.models.order import Order, OrderItem
 from app.models.user import User
+from app.core.messages import Msg
 
-router = APIRouter(prefix="/documents", tags=["Documents"])
+router = APIRouter(prefix="/documents", tags=["Документы"])
 
 FONT_NAME = "Helvetica"
 FONT_BOLD = "Helvetica-Bold"
@@ -437,7 +438,7 @@ async def get_document_lifecycle(
 ):
     order, items, has_installation = await _get_order_with_items(order_id, current_user, db)
     if not order:
-        return JSONResponse(status_code=404, content={"detail": "Order not found"})
+        return JSONResponse(status_code=404, content={"detail": Msg.ORDER_NOT_FOUND})
 
     shipments = _build_shipment_groups(items)
     return {
@@ -456,7 +457,7 @@ async def generate_invoice(
 ):
     order, items, has_installation = await _get_order_with_items(order_id, current_user, db)
     if not order:
-        return JSONResponse(status_code=404, content={"detail": "Order not found"})
+        return JSONResponse(status_code=404, content={"detail": Msg.ORDER_NOT_FOUND})
 
     invoice = {
         "document_type": "INVOICE",
@@ -499,7 +500,7 @@ async def generate_upd(
 ):
     order, items, has_installation = await _get_order_with_items(order_id, current_user, db)
     if not order:
-        return JSONResponse(status_code=404, content={"detail": "Order not found"})
+        return JSONResponse(status_code=404, content={"detail": Msg.ORDER_NOT_FOUND})
 
     upd = {
         "document_type": "UPD",
@@ -541,7 +542,7 @@ async def generate_act(
 ):
     order, items, _ = await _get_order_with_items(order_id, current_user, db)
     if not order:
-        return JSONResponse(status_code=404, content={"detail": "Order not found"})
+        return JSONResponse(status_code=404, content={"detail": Msg.ORDER_NOT_FOUND})
 
     installation_items = [item for item in items if item.is_installation]
     has_installation = len(installation_items) > 0
@@ -586,12 +587,12 @@ async def generate_shipment_invoice(
 ):
     order, items, _ = await _get_order_with_items(order_id, current_user, db)
     if not order:
-        return JSONResponse(status_code=404, content={"detail": "Order not found"})
+        return JSONResponse(status_code=404, content={"detail": Msg.ORDER_NOT_FOUND})
 
     shipments = _build_shipment_groups(items)
     shipment = next((shipment for shipment in shipments if (shipment["supplier_id"] or "unknown") == supplier_id), None)
     if not shipment:
-        return JSONResponse(status_code=404, content={"detail": "Shipment not found"})
+        return JSONResponse(status_code=404, content={"detail": Msg.SHIPMENT_NOT_FOUND})
     return _build_shipment_invoice(order, shipment, current_user)
 
 
@@ -604,12 +605,12 @@ async def generate_shipment_upd(
 ):
     order, items, _ = await _get_order_with_items(order_id, current_user, db)
     if not order:
-        return JSONResponse(status_code=404, content={"detail": "Order not found"})
+        return JSONResponse(status_code=404, content={"detail": Msg.ORDER_NOT_FOUND})
 
     shipments = _build_shipment_groups(items)
     shipment = next((shipment for shipment in shipments if (shipment["supplier_id"] or "unknown") == supplier_id), None)
     if not shipment:
-        return JSONResponse(status_code=404, content={"detail": "Shipment not found"})
+        return JSONResponse(status_code=404, content={"detail": Msg.SHIPMENT_NOT_FOUND})
     return _build_shipment_upd(order, shipment, current_user)
 
 

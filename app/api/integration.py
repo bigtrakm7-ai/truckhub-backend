@@ -16,9 +16,10 @@ from app.models.user import User
 from app.models.product import Product
 from app.models.order import Order, OrderItem
 from app.api.auth import get_current_active_user
+from app.core.messages import Msg
 
 logger = get_logger(__name__)
-router = APIRouter(prefix="/integration", tags=["1C Integration"])
+router = APIRouter(prefix="/integration", tags=["Интеграция 1С"])
 
 
 @router.post("/1c/upload/catalog")
@@ -28,7 +29,7 @@ async def upload_catalog_from_1c(
     db: AsyncSession = Depends(get_db),
 ):
     if not file.filename.endswith((".csv", ".xml")):
-        raise HTTPException(status_code=400, detail="Only CSV and XML formats supported")
+        raise HTTPException(status_code=400, detail=Msg.CSV_XML_ONLY)
 
     content = await file.read()
 
@@ -70,7 +71,7 @@ async def upload_catalog_from_1c(
 
     await db.commit()
 
-    return {"message": "Import completed", "imported": imported, "updated": updated, "errors": errors}
+    return {"message": Msg.IMPORT_COMPLETED, "imported": imported, "updated": updated, "errors": errors}
 
 
 @router.get("/1c/export/orders")
@@ -150,7 +151,7 @@ async def sync_stock_from_1c(
             updated += 1
 
     await db.commit()
-    return {"message": f"Synced {updated} products", "updated": updated}
+    return {"message": Msg.products_synced(updated), "updated": updated}
 
 
 @router.get("/providers/health")
@@ -177,7 +178,7 @@ async def delivery_estimate(
         raise HTTPException(status_code=422, detail=str(exc))
     except Exception:
         logger.exception("delivery_estimate_unexpected")
-        raise HTTPException(status_code=502, detail="delivery provider unavailable")
+        raise HTTPException(status_code=502, detail=Msg.DELIVERY_PROVIDER_UNAVAILABLE)
 
 
 @router.get("/catalog/vin/{vin}")
@@ -214,6 +215,6 @@ async def send_notification(
             "notification_send_failed",
             extra={"extra": {"channel": p.channel, "to": p.to, "error": result.get("error", "")}},
         )
-        raise HTTPException(status_code=502, detail="notification provider unavailable")
+        raise HTTPException(status_code=502, detail=Msg.NOTIFICATION_PROVIDER_UNAVAILABLE)
 
     return result

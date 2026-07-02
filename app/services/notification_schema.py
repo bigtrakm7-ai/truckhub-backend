@@ -1,6 +1,8 @@
 ﻿from dataclasses import dataclass
 from typing import Optional, Literal, Dict, Any
 
+from app.core.messages import Msg
+
 
 NotificationChannel = Literal["email", "sms", "telegram"]
 
@@ -18,11 +20,11 @@ def validate_notification_payload(payload: Dict[str, Any]) -> NotificationPayloa
     message = (payload.get("message") or "").strip()
 
     if channel not in ("email", "sms", "telegram"):
-        raise ValueError("unsupported channel")
+        raise ValueError(Msg.UNSUPPORTED_CHANNEL)
     if not to:
-        raise ValueError("recipient is required")
+        raise ValueError(Msg.RECIPIENT_REQUIRED)
     if not message:
-        raise ValueError("message is required")
+        raise ValueError(Msg.MESSAGE_REQUIRED)
 
     return NotificationPayload(channel=channel, to=to, message=message)
 

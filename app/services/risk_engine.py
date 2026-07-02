@@ -25,7 +25,7 @@ def validate_inn(inn: str) -> Dict[str, Any]:
     inn = re.sub(r"[^\d]", "", inn)
     
     if len(inn) not in (10, 12):
-        return {"valid": False, "error": f"INN must be 10 or 12 digits, got {len(inn)}"}
+        return {"valid": False, "error": f"ИНН должен содержать 10 или 12 цифр, получено: {len(inn)}"}
 
     # Checksum for 10-digit INN (legal entity)
     if len(inn) == 10:
@@ -35,7 +35,7 @@ def validate_inn(inn: str) -> Dict[str, Any]:
         if check > 9:
             check = check % 10
         if check != int(inn[9]):
-            return {"valid": False, "error": "Checksum mismatch"}
+            return {"valid": False, "error": "Ошибка контрольной суммы"}
         return {"valid": True, "type": "legal", "inn": inn}
 
     # Checksum for 12-digit INN (individual)
@@ -53,10 +53,10 @@ def validate_inn(inn: str) -> Dict[str, Any]:
             check2 = check2 % 10
 
         if check1 != int(inn[10]) or check2 != int(inn[11]):
-            return {"valid": False, "error": "Checksum mismatch"}
+            return {"valid": False, "error": "Ошибка контрольной суммы"}
         return {"valid": True, "type": "individual", "inn": inn}
 
-    return {"valid": False, "error": "Unknown INN format"}
+    return {"valid": False, "error": "Неизвестный формат ИНН"}
 
 
 # ── Stop List ────────────────────────────────────────────────────────
@@ -144,43 +144,43 @@ class CounterpartyRiskEngine:
             checks.append({"check": "inn_validation", "passed": False, "detail": inn_result["error"]})
             risk_score += 50
         else:
-            checks.append({"check": "inn_validation", "passed": True, "detail": f"Valid {inn_result['type']} INN"})
+            checks.append({"check": "inn_validation", "passed": True, "detail": f"Корректный ИНН ({'юрлица' if inn_result['type'] == 'legal' else 'физлица'})"})
 
         # 2. Stop list check
         stop_entry = StopListManager.check(inn)
         if stop_entry:
-            checks.append({"check": "stop_list", "passed": False, "detail": f"In stop list: {stop_entry.reason}"})
+            checks.append({"check": "stop_list", "passed": False, "detail": f"В стоп-листе: {stop_entry.reason}"})
             risk_score += 100
         else:
-            checks.append({"check": "stop_list", "passed": True, "detail": "Not in stop list"})
+            checks.append({"check": "stop_list", "passed": True, "detail": "Не в стоп-листе"})
 
         # 3. INN format anomalies
         if inn and len(inn) == 10:
             region_code = inn[:2]
             if region_code == "00":
-                checks.append({"check": "inn_region", "passed": False, "detail": "Invalid region code"})
+                checks.append({"check": "inn_region", "passed": False, "detail": "Недопустимый код региона"})
                 risk_score += 20
             else:
-                checks.append({"check": "inn_region", "passed": True, "detail": f"Region: {region_code}"})
+                checks.append({"check": "inn_region", "passed": True, "detail": f"Регион: {region_code}"})
 
         # 4. Email domain check
         if email:
             domain = email.split("@")[-1].lower()
             suspicious_domains = {"tempmail.com", "guerrillamail.com", "throwaway.email"}
             if domain in suspicious_domains:
-                checks.append({"check": "email_domain", "passed": False, "detail": f"Suspicious domain: {domain}"})
+                checks.append({"check": "email_domain", "passed": False, "detail": f"Подозрительный домен: {domain}"})
                 risk_score += 30
             else:
-                checks.append({"check": "email_domain", "passed": True, "detail": f"Domain: {domain}"})
+                checks.append({"check": "email_domain", "passed": True, "detail": f"Домен: {domain}"})
 
         # 5. Phone check
         if phone:
             phone_digits = re.sub(r"[^\d]", "", phone)
             if len(phone_digits) < 10:
-                checks.append({"check": "phone_format", "passed": False, "detail": "Invalid phone number"})
+                checks.append({"check": "phone_format", "passed": False, "detail": "Недопустимый формат телефона"})
                 risk_score += 10
             else:
-                checks.append({"check": "phone_format", "passed": True, "detail": "Valid phone format"})
+                checks.append({"check": "phone_format", "passed": True, "detail": "Корректный формат телефона"})
 
         # 6. FNS API check (mock)
         fns_result = await CounterpartyRiskEngine._check_fns(inn)
@@ -197,16 +197,16 @@ class CounterpartyRiskEngine:
         # Determine risk level
         if risk_score >= 80:
             level = RiskLevel.CRITICAL
-            recommendation = "Reject: critical risk. Manual review required."
+            recommendation = "Отклонить: критический риск. Требуется ручная проверка."
         elif risk_score >= 50:
             level = RiskLevel.HIGH
-            recommendation = "Require manual review before approval."
+            recommendation = "Требуется ручная проверка перед одобрением."
         elif risk_score >= 20:
             level = RiskLevel.MEDIUM
-            recommendation = "Approve with enhanced monitoring."
+            recommendation = "Одобрить с усиленным мониторингом."
         else:
             level = RiskLevel.LOW
-            recommendation = "Approve with standard monitoring."
+            recommendation = "Одобрить со стандартным мониторингом."
 
         return RiskCheckResult(level=level, checks=checks, recommendation=recommendation)
 
@@ -214,7 +214,7 @@ class CounterpartyRiskEngine:
     async def _check_fns(inn: str) -> Dict[str, Any]:
         """Check Federal Tax Service (mock)."""
         if not inn:
-            return {"check": "fns", "passed": False, "detail": "INN not provided"}
+            return {"check": "fns", "passed": False, "detail": "ИНН не указан"}
 
         try:
             fns_api_url = getattr(settings, "FNS_API_URL", "")
@@ -232,13 +232,13 @@ class CounterpartyRiskEngine:
                     data = resp.json()
                     status = data.get("status", "unknown")
                     if status == "active":
-                        return {"check": "fns", "passed": True, "detail": "Legal entity is active"}
+                        return {"check": "fns", "passed": True, "detail": "Юридическое лицо действующее"}
                     else:
-                        return {"check": "fns", "passed": False, "detail": f"Status: {status}"}
+                        return {"check": "fns", "passed": False, "detail": f"Статус: {status}"}
 
-            return {"check": "fns", "passed": True, "detail": "FNS check skipped (no API key)"}
+            return {"check": "fns", "passed": True, "detail": "Проверка ФНС пропущена (нет API-ключа)"}
         except Exception:
-            return {"check": "fns", "passed": True, "detail": "FNS check unavailable"}
+            return {"check": "fns", "passed": True, "detail": "Проверка ФНС недоступна"}
 
     @staticmethod
     async def _check_sanctions(inn: str) -> Dict[str, Any]:
@@ -246,4 +246,4 @@ class CounterpartyRiskEngine:
         if not inn:
             return {"check": "sanctions", "passed": False, "detail": "INN not provided"}
 
-        return {"check": "sanctions", "passed": True, "detail": "Not on sanctions lists"}
+        return {"check": "sanctions", "passed": True, "detail": "Не в санкционных списках"}

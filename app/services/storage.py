@@ -10,6 +10,7 @@ from typing import Optional, BinaryIO
 from datetime import datetime
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.core.messages import Msg
 
 logger = get_logger(__name__)
 
@@ -51,7 +52,7 @@ class StorageService:
         """Upload a file. Returns URL/path to the stored file."""
         ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
         if ext not in ALLOWED_EXTENSIONS:
-            raise ValueError(f"File type .{ext} not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}")
+            raise ValueError(Msg.FILE_TYPE_NOT_ALLOWED.format(ext=ext, allowed=", ".join(ALLOWED_EXTENSIONS)))
 
         unique_name = f"{folder}/{datetime.now().strftime('%Y/%m/%d')}/{uuid.uuid4().hex[:8]}.{ext}"
 

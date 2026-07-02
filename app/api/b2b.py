@@ -22,8 +22,9 @@ from app.schemas.b2b import (
     ReferralProgramResponse,
 )
 from app.api.auth import get_current_active_user
+from app.core.messages import Msg
 
-router = APIRouter(prefix="/b2b", tags=["B2B Functions"])
+router = APIRouter(prefix="/b2b", tags=["B2B"])
 
 
 # in-memory demo storage for MVP B2B workflow
@@ -40,7 +41,7 @@ async def create_credit_application(
     db: AsyncSession = Depends(get_db),
 ):
     if not current_user.inn:
-        raise HTTPException(status_code=400, detail="INN required for credit application")
+        raise HTTPException(status_code=400, detail=Msg.INN_REQUIRED_CREDIT)
 
     application = {
         "id": str(uuid.uuid4()),
@@ -93,15 +94,15 @@ async def request_payment_deferral(
     db: AsyncSession = Depends(get_db),
 ):
     if not current_user.inn:
-        raise HTTPException(status_code=400, detail="INN required for deferral")
+        raise HTTPException(status_code=400, detail=Msg.INN_REQUIRED_DEFERRAL)
 
     result = await db.execute(select(Order).where(Order.id == data.order_id))
     order = result.scalar_one_or_none()
     if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise HTTPException(status_code=404, detail=Msg.ORDER_NOT_FOUND)
 
     if order.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not your order")
+        raise HTTPException(status_code=403, detail=Msg.NOT_YOUR_ORDER)
 
     deferral = {
         "id": str(uuid.uuid4()),
@@ -133,20 +134,20 @@ async def create_quote_request(
     db: AsyncSession = Depends(get_db),
 ):
     if not current_user.inn:
-        raise HTTPException(status_code=400, detail="INN required for quote request")
+        raise HTTPException(status_code=400, detail=Msg.INN_REQUIRED_QUOTE)
 
     if not data.items:
-        raise HTTPException(status_code=422, detail="At least one quote item is required")
+        raise HTTPException(status_code=422, detail=Msg.QUOTE_ITEMS_REQUIRED)
 
     normalized_items: List[QuoteRequestItem] = []
     for item in data.items:
         if item.quantity <= 0:
-            raise HTTPException(status_code=422, detail="Item quantity must be positive")
+            raise HTTPException(status_code=422, detail=Msg.QUOTE_ITEM_QTY_POSITIVE)
 
         product_result = await db.execute(select(Product).where(Product.id == item.product_id))
         product = product_result.scalar_one_or_none()
         if not product:
-            raise HTTPException(status_code=404, detail=f"Product not found: {item.product_id}")
+            raise HTTPException(status_code=404, detail=Msg.product_not_found_id(item.product_id))
 
         normalized_items.append(
             QuoteRequestItem(
@@ -212,10 +213,10 @@ async def get_quote_request(
 ):
     quote = next((q for q in quote_requests_storage if q.get("id") == quote_id), None)
     if not quote:
-        raise HTTPException(status_code=404, detail="Quote request not found")
+        raise HTTPException(status_code=404, detail=Msg.QUOTE_NOT_FOUND)
 
     if quote.get("user_id") != current_user.id:
-        raise HTTPException(status_code=403, detail="Not your quote request")
+        raise HTTPException(status_code=403, detail=Msg.NOT_YOUR_QUOTE)
 
     return QuoteRequestResponse(
         id=quote["id"],
@@ -315,4 +316,4 @@ async def withdraw_referral_bonus(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return {"message": f"Request for {amount} ₽ submitted"}
+    return {"message": Msg.credit_request_submitted(amount)}

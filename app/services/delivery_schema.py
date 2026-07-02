@@ -1,6 +1,8 @@
 ﻿from dataclasses import dataclass
 from typing import Dict, Any
 
+from app.core.messages import Msg
+
 
 @dataclass
 class DeliveryEstimateRequest:
@@ -22,14 +24,14 @@ def validate_delivery_payload(payload: Dict[str, Any]) -> DeliveryEstimateReques
         weight_kg = float(payload.get("weight_kg", 0))
         volume_m3 = float(payload.get("volume_m3", 0))
     except Exception as exc:
-        raise ValueError("weight_kg and volume_m3 must be numbers") from exc
+        raise ValueError(Msg.WEIGHT_VOLUME_NUMBERS) from exc
 
     if provider not in ("cdek", "pec", "delovye_linii"):
-        raise ValueError("unsupported provider")
+        raise ValueError(Msg.UNSUPPORTED_PROVIDER)
     if not from_city or not to_city:
-        raise ValueError("from_city and to_city are required")
+        raise ValueError(Msg.CITIES_REQUIRED)
     if weight_kg <= 0 or volume_m3 < 0:
-        raise ValueError("invalid weight/volume")
+        raise ValueError(Msg.INVALID_WEIGHT_VOLUME)
 
     return DeliveryEstimateRequest(
         provider=provider,

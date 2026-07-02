@@ -7,8 +7,9 @@ from app.core.database import get_db
 from app.models.product import Product, Category, Brand
 from app.models.supplier import Supplier
 from app.schemas.product import ProductResponse, CategoryResponse, BrandResponse, ProductSearchParams
+from app.core.messages import Msg
 
-router = APIRouter(prefix="/products", tags=["Products"])
+router = APIRouter(prefix="/products", tags=["Товары"])
 
 
 @router.get("/", response_model=List[ProductResponse])
@@ -56,7 +57,7 @@ async def get_product(product_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Product).where(Product.id == product_id))
     product = result.scalar_one_or_none()
     if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail=Msg.PRODUCT_NOT_FOUND)
     return product
 
 

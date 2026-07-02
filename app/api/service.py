@@ -16,8 +16,9 @@ from app.schemas.service import (
 from app.api.auth import get_current_active_user
 from app.core.rbac import require_roles
 from app.core.enums import UserRole
+from app.core.messages import Msg
 
-router = APIRouter(prefix="/service", tags=["Service"])
+router = APIRouter(prefix="/service", tags=["Сервис"])
 
 ALLOWED_BOOKING_STATUSES = {"pending", "confirmed", "in_progress", "completed", "cancelled"}
 BOOKING_STATUS_TRANSITIONS = {
@@ -32,7 +33,7 @@ BOOKING_STATUS_TRANSITIONS = {
 def _normalize_booking_status(status: str) -> str:
     normalized = (status or "").strip().lower()
     if normalized not in ALLOWED_BOOKING_STATUSES:
-        raise HTTPException(status_code=422, detail="Invalid booking status")
+        raise HTTPException(status_code=422, detail=Msg.INVALID_BOOKING_STATUS)
     return normalized
 
 
@@ -75,7 +76,7 @@ async def get_partner(partner_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(ServicePartner).where(ServicePartner.id == partner_id))
     partner = result.scalar_one_or_none()
     if not partner:
-        raise HTTPException(status_code=404, detail="Partner not found")
+        raise HTTPException(status_code=404, detail=Msg.PARTNER_NOT_FOUND)
     return partner
 
 
@@ -87,7 +88,7 @@ async def get_partner_rating_summary(
     partner_result = await db.execute(select(ServicePartner).where(ServicePartner.id == partner_id))
     partner = partner_result.scalar_one_or_none()
     if not partner:
-        raise HTTPException(status_code=404, detail="Partner not found")
+        raise HTTPException(status_code=404, detail=Msg.PARTNER_NOT_FOUND)
 
     agg_result = await db.execute(
         select(func.avg(ServiceReview.rating), func.count(ServiceReview.id))
@@ -156,7 +157,7 @@ async def generate_slots(
     result = await db.execute(select(ServicePartner).where(ServicePartner.id == partner_id))
     partner = result.scalar_one_or_none()
     if not partner:
-        raise HTTPException(status_code=404, detail="Partner not found")
+        raise HTTPException(status_code=404, detail=Msg.PARTNER_NOT_FOUND)
 
     start = datetime.fromisoformat(start_date)
     slots_created = 0
@@ -191,7 +192,7 @@ async def generate_slots(
                 slots_created += 1
 
     await db.commit()
-    return {"message": f"Created {slots_created} slots"}
+    return {"message": Msg.slots_created(slots_created)}
 
 
 # === BOOKINGS ===
@@ -205,14 +206,14 @@ async def create_booking(
     slot_result = await db.execute(select(ServiceSlot).where(ServiceSlot.id == booking.slot_id))
     slot = slot_result.scalar_one_or_none()
     if not slot:
-        raise HTTPException(status_code=404, detail="Slot not found")
+        raise HTTPException(status_code=404, detail=Msg.SLOT_NOT_FOUND)
     if slot.is_booked:
-        raise HTTPException(status_code=400, detail="Slot is already booked")
+        raise HTTPException(status_code=400, detail=Msg.SLOT_ALREADY_BOOKED)
 
     partner_result = await db.execute(select(ServicePartner).where(ServicePartner.id == booking.partner_id))
     partner = partner_result.scalar_one_or_none()
     if not partner:
-        raise HTTPException(status_code=404, detail="Partner not found")
+        raise HTTPException(status_code=404, detail=Msg.PARTNER_NOT_FOUND)
 
     booking_id = str(uuid.uuid4())
 
@@ -359,11 +360,11 @@ async def update_booking_status(
     result = await db.execute(select(InstallationBooking).where(InstallationBooking.id == booking_id))
     booking = result.scalar_one_or_none()
     if not booking:
-        raise HTTPException(status_code=404, detail="Booking not found")
+        raise HTTPException(status_code=404, detail=Msg.BOOKING_NOT_FOUND)
 
     target_status = _normalize_booking_status(status)
     if not _can_transition_booking_status(booking.status, target_status):
-        raise HTTPException(status_code=409, detail="Invalid booking status transition")
+        raise HTTPException(status_code=409, detail=Msg.INVALID_BOOKING_TRANSITION)
 
     booking.status = target_status
 
@@ -375,7 +376,7 @@ async def update_booking_status(
             slot.booking_id = None
 
     await db.commit()
-    return {"message": "Booking status updated", "status": target_status}
+    return {"message": Msg.BOOKING_STATUS_UPDATED, "status": target_status}
 
 
 # === REVIEWS ===
@@ -389,7 +390,7 @@ async def create_review(
     booking_result = await db.execute(select(InstallationBooking).where(InstallationBooking.id == review.booking_id))
     booking = booking_result.scalar_one_or_none()
     if not booking:
-        raise HTTPException(status_code=404, detail="Booking not found")
+        raise HTTPException(status_code=404, detail=Msg.BOOKING_NOT_FOUND)
 
     new_review = ServiceReview(
         id=str(uuid.uuid4()),

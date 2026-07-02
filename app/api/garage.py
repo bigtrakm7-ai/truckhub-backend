@@ -9,8 +9,9 @@ from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.schemas.vehicle import VehicleCreate, VehicleUpdate, VehicleResponse, GarageResponse
 from app.api.auth import get_current_active_user
+from app.core.messages import Msg
 
-router = APIRouter(prefix="/garage", tags=["Garage"])
+router = APIRouter(prefix="/garage", tags=["Гараж"])
 
 
 @router.get("/", response_model=GarageResponse)
@@ -33,7 +34,7 @@ async def add_vehicle(
 ):
     result = await db.execute(select(Vehicle).where(Vehicle.vin == vehicle_data.vin))
     if result.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Vehicle with this VIN already exists")
+        raise HTTPException(status_code=400, detail=Msg.VEHICLE_VIN_EXISTS)
     
     check_default = await db.execute(
         select(Vehicle).where(Vehicle.user_id == current_user.id, Vehicle.is_default == True)
@@ -73,7 +74,7 @@ async def update_vehicle(
     )
     vehicle = result.scalar_one_or_none()
     if not vehicle:
-        raise HTTPException(status_code=404, detail="Vehicle not found")
+        raise HTTPException(status_code=404, detail=Msg.VEHICLE_NOT_FOUND)
     
     update_data = vehicle_data.dict(exclude_unset=True)
     
@@ -106,11 +107,11 @@ async def delete_vehicle(
     )
     vehicle = result.scalar_one_or_none()
     if not vehicle:
-        raise HTTPException(status_code=404, detail="Vehicle not found")
+        raise HTTPException(status_code=404, detail=Msg.VEHICLE_NOT_FOUND)
     
     await db.delete(vehicle)
     await db.commit()
-    return {"message": "Vehicle deleted"}
+    return {"message": Msg.VEHICLE_DELETED}
 
 
 @router.post("/{vehicle_id}/set-default")
@@ -124,7 +125,7 @@ async def set_default_vehicle(
     )
     vehicle = result.scalar_one_or_none()
     if not vehicle:
-        raise HTTPException(status_code=404, detail="Vehicle not found")
+        raise HTTPException(status_code=404, detail=Msg.VEHICLE_NOT_FOUND)
     
     result_all = await db.execute(
         select(Vehicle).where(Vehicle.user_id == current_user.id)
@@ -133,4 +134,4 @@ async def set_default_vehicle(
         v.is_default = v.id == vehicle_id
     
     await db.commit()
-    return {"message": "Default vehicle set"}
+    return {"message": Msg.DEFAULT_VEHICLE_SET}

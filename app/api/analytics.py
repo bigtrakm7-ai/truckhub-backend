@@ -14,7 +14,7 @@ from app.models.product import Product
 from app.models.review import Review
 from app.core.enums import UserRole, OrderStatus
 
-router = APIRouter(prefix="/analytics", tags=["analytics"])
+router = APIRouter(prefix="/analytics", tags=["Аналитика"])
 
 
 class DashboardStats(BaseModel):

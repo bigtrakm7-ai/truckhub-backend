@@ -19,6 +19,7 @@ from app.models.supplier import PriceUpload, Supplier, SupplierAnalytics, Suppli
 from app.models.user import User
 from app.models.warranty import NotificationSettings
 from app.services import integration_service
+from app.core.messages import Msg
 from app.schemas.supplier import (
     PriceUploadResponse,
     SupplierAnalyticsResponse,
@@ -31,7 +32,7 @@ from app.schemas.supplier import (
     SupplierProductUpdate,
 )
 
-router = APIRouter(prefix="/supplier", tags=["Supplier"])
+router = APIRouter(prefix="/supplier", tags=["Поставщик"])
 
 
 class PriceUploadUrlRequest(BaseModel):
@@ -215,7 +216,7 @@ async def process_csv_upload(
         upload.errors = errors + 1
         upload.completed_at = datetime.utcnow()
         await db.commit()
-        raise HTTPException(status_code=400, detail=f"Parsing error: {str(exc)}")
+        raise HTTPException(status_code=400, detail=Msg.parsing_error_detail(exc))
 
     upload.total_products = updated + new
     upload.updated_products = updated
@@ -303,7 +304,7 @@ async def create_supplier_product(
     existing_result = await db.execute(select(Product).where(Product.article == data.article))
     existing_product = existing_result.scalar_one_or_none()
     if existing_product:
-        raise HTTPException(status_code=400, detail="Product with this article already exists")
+        raise HTTPException(status_code=400, detail=Msg.PRODUCT_ARTICLE_EXISTS)
 
     product = Product(
         id=str(uuid.uuid4()),
@@ -345,7 +346,7 @@ async def update_product(
     result = await db.execute(select(Product).where(Product.id == product_id, Product.supplier_id == supplier.id))
     product = result.scalar_one_or_none()
     if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail=Msg.PRODUCT_NOT_FOUND)
 
     update_data = data.dict(exclude_unset=True)
     for field, value in update_data.items():
@@ -379,7 +380,7 @@ async def bulk_update_products(
     supplier = await get_supplier(current_user, db)
 
     if not data.product_ids:
-        raise HTTPException(status_code=400, detail="No product ids provided")
+        raise HTTPException(status_code=400, detail=Msg.NO_PRODUCT_IDS)
 
     result = await db.execute(
         select(Product).where(
@@ -390,11 +391,11 @@ async def bulk_update_products(
     products = result.scalars().all()
 
     if not products:
-        raise HTTPException(status_code=404, detail="Products not found")
+        raise HTTPException(status_code=404, detail=Msg.PRODUCTS_NOT_FOUND)
 
     updated_fields = data.dict(exclude_unset=True, exclude={"product_ids"})
     if not updated_fields:
-        raise HTTPException(status_code=400, detail="No update fields provided")
+        raise HTTPException(status_code=400, detail=Msg.NO_UPDATE_FIELDS)
 
     for product in products:
         for field, value in updated_fields.items():
@@ -420,12 +421,12 @@ async def archive_product(
     result = await db.execute(select(Product).where(Product.id == product_id, Product.supplier_id == supplier.id))
     product = result.scalar_one_or_none()
     if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail=Msg.PRODUCT_NOT_FOUND)
 
     product.is_active = False
     await db.commit()
 
-    return {"message": "Product archived", "id": product.id}
+    return {"message": Msg.PRODUCT_ARCHIVED, "id": product.id}
 
 
 @router.post("/prices/upload", response_model=PriceUploadResponse)
@@ -437,11 +438,11 @@ async def upload_price_list(
     supplier = await get_supplier(current_user, db)
 
     if not file.filename:
-        raise HTTPException(status_code=400, detail="Filename required")
+        raise HTTPException(status_code=400, detail=Msg.FILENAME_REQUIRED)
 
     file_format = file.filename.split(".")[-1].lower()
     if file_format != "csv":
-        raise HTTPException(status_code=400, detail="Сейчас поддерживается только CSV")
+        raise HTTPException(status_code=400, detail=Msg.CSV_ONLY)
 
     content = await file.read()
     return await process_csv_upload(supplier, file.filename, content, db, import_kind="products")
@@ -457,7 +458,7 @@ async def upload_price_list_by_url(
     url = str(payload.url)
 
     if ".csv" not in url.lower():
-        raise HTTPException(status_code=400, detail="Ссылка должна вести на CSV-файл")
+        raise HTTPException(status_code=400, detail=Msg.CSV_URL_REQUIRED)
 
     download_error: httpx.HTTPError | None = None
     response_content: bytes | None = None
@@ -475,7 +476,7 @@ async def upload_price_list_by_url(
     if response_content is None:
         raise HTTPException(
             status_code=400,
-            detail=f"Не удалось скачать CSV по ссылке: {str(download_error) if download_error else 'unknown error'}",
+            detail=Msg.csv_download_error(str(download_error) if download_error else None),
         )
 
     filename = url.rstrip("/").split("/")[-1] or f"prices-{supplier.id}.csv"
@@ -536,7 +537,7 @@ async def request_withdraw(
 ):
     supplier = await get_supplier(current_user, db)
     if amount > supplier.balance:
-        raise HTTPException(status_code=400, detail="Insufficient balance")
+        raise HTTPException(status_code=400, detail=Msg.INSUFFICIENT_BALANCE)
 
     db.add(
         SupplierBalance(
@@ -552,7 +553,7 @@ async def request_withdraw(
 
     supplier.balance -= amount
     await db.commit()
-    return {"message": "Withdraw request submitted", "new_balance": supplier.balance}
+    return {"message": Msg.WITHDRAW_SUBMITTED, "new_balance": supplier.balance}
 
 
 @router.get("/analytics", response_model=SupplierAnalyticsResponse)
@@ -660,7 +661,7 @@ async def update_order_status(
     result = await db.execute(select(Order).where(Order.id == order_id))
     order = result.scalar_one_or_none()
     if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise HTTPException(status_code=404, detail=Msg.ORDER_NOT_FOUND)
 
     items_query = select(OrderItem).where(OrderItem.order_id == order.id, OrderItem.supplier_id == supplier.id)
     if order_item_id:
@@ -668,7 +669,7 @@ async def update_order_status(
     items_result = await db.execute(items_query)
     target_items = items_result.scalars().all()
     if not target_items:
-        raise HTTPException(status_code=404, detail="Shipment item not found")
+        raise HTTPException(status_code=404, detail=Msg.SHIPMENT_ITEM_NOT_FOUND)
 
     target_status = status.lower().strip()
 
@@ -681,7 +682,7 @@ async def update_order_status(
         for item in target_items:
             item.shipment_status = "cancelled"
     else:
-        raise HTTPException(status_code=400, detail="Invalid status")
+        raise HTTPException(status_code=400, detail=Msg.INVALID_STATUS)
 
     all_items_result = await db.execute(select(OrderItem).where(OrderItem.order_id == order.id))
     all_items = all_items_result.scalars().all()
@@ -715,11 +716,11 @@ async def update_order_status(
             email_enabled=notification_settings.email_enabled if notification_settings else True,
             sms_enabled=notification_settings.sms_enabled if notification_settings else False,
             telegram_enabled=notification_settings.telegram_enabled if notification_settings else False,
-            message=f"Order {order.order_number}: status changed to {order.status.value}",
+            message=Msg.order_status_changed(order.order_number, order.status.value),
         )
 
     return {
-        "message": "Status updated",
+        "message": Msg.STATUS_UPDATED,
         "order_id": order.id,
         "order_number": order.order_number,
         "status": order.status.value,

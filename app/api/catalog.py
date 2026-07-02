@@ -24,8 +24,9 @@ from app.schemas.catalog import (
 from app.schemas.vin import VinDecodeResult, VinTreeResponse, VinTreeNode, VinSearchResult
 from app.services.integration_service import integration_service
 from app.services.performance import cache_response, SearchOptimizer
+from app.core.messages import Msg
 
-router = APIRouter(prefix="/catalog", tags=["Catalog"])
+router = APIRouter(prefix="/catalog", tags=["Каталог"])
 
 
 def _catalog_group_key(product: Product) -> str:
@@ -410,7 +411,7 @@ async def get_product(
     result = await db.execute(select(Product).where(Product.id == product_id))
     product = result.scalar_one_or_none()
     if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail=Msg.PRODUCT_NOT_FOUND)
 
     brand_name = None
     if product.brand_id:
@@ -583,7 +584,7 @@ async def get_bundle_recommendations(
     result = await db.execute(select(Product).where(Product.id == product_id))
     base = result.scalar_one_or_none()
     if not base:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail=Msg.PRODUCT_NOT_FOUND)
 
     candidates_result = await db.execute(
         select(Product)
@@ -674,7 +675,7 @@ async def get_vin_section_products(
                 break
 
     if not section_keywords:
-        raise HTTPException(status_code=404, detail="Section not found")
+        raise HTTPException(status_code=404, detail=Msg.SECTION_NOT_FOUND)
 
     decoded = integration_service.decode_vin(vin)
     brand_name = decoded.get("brand", "")

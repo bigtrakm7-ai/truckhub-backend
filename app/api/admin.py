@@ -21,12 +21,13 @@ from app.schemas.admin import (
 from app.api.auth import get_current_active_user
 from app.core.rbac import require_roles
 from app.services import integration_service
+from app.core.messages import Msg
 
-router = APIRouter(prefix="/admin", tags=["Admin"])
+router = APIRouter(prefix="/admin", tags=["Администрирование"])
 
 async def require_admin(current_user: User = Depends(require_roles(UserRole.ADMIN))) -> User:
     if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER]:
-        raise HTTPException(status_code=403, detail="Admin access required")
+        raise HTTPException(status_code=403, detail=Msg.ADMIN_ACCESS_REQUIRED)
     return current_user
 
 # === DASHBOARD ===
@@ -153,12 +154,12 @@ async def approve_verification(
     result = await db.execute(select(UserVerification).where(UserVerification.id == verification_id))
     verification = result.scalar_one_or_none()
     if not verification:
-        raise HTTPException(status_code=404, detail="Verification not found")
+        raise HTTPException(status_code=404, detail=Msg.VERIFICATION_NOT_FOUND)
     verification.status = "approved"
     verification.verified_by = admin.id
     verification.verified_at = datetime.utcnow()
     await db.commit()
-    return {"message": "Verification approved"}
+    return {"message": Msg.VERIFICATION_APPROVED}
 
 @router.post("/verifications/{verification_id}/reject")
 async def reject_verification(
@@ -170,13 +171,13 @@ async def reject_verification(
     result = await db.execute(select(UserVerification).where(UserVerification.id == verification_id))
     verification = result.scalar_one_or_none()
     if not verification:
-        raise HTTPException(status_code=404, detail="Verification not found")
+        raise HTTPException(status_code=404, detail=Msg.VERIFICATION_NOT_FOUND)
     verification.status = "rejected"
     verification.verified_by = admin.id
     verification.verified_at = datetime.utcnow()
     verification.rejection_reason = reason
     await db.commit()
-    return {"message": "Verification rejected"}
+    return {"message": Msg.VERIFICATION_REJECTED}
 
 # === COMMISSION RULES ===
 
@@ -230,7 +231,7 @@ async def update_commission_rule(
     result = await db.execute(select(CommissionRule).where(CommissionRule.id == rule_id))
     rule = result.scalar_one_or_none()
     if not rule:
-        raise HTTPException(status_code=404, detail="Commission rule not found")
+        raise HTTPException(status_code=404, detail=Msg.COMMISSION_RULE_NOT_FOUND)
     for key, value in data.model_dump(exclude_none=True).items():
         setattr(rule, key, value)
     rule.updated_at = datetime.utcnow()
@@ -280,7 +281,7 @@ async def update_banner(
     result = await db.execute(select(Banner).where(Banner.id == banner_id))
     banner = result.scalar_one_or_none()
     if not banner:
-        raise HTTPException(status_code=404, detail="Banner not found")
+        raise HTTPException(status_code=404, detail=Msg.BANNER_NOT_FOUND)
     for key, value in data.model_dump(exclude_none=True).items():
         setattr(banner, key, value)
     banner.updated_at = datetime.utcnow()
@@ -343,7 +344,7 @@ async def update_order_status(
     result = await db.execute(select(Order).where(Order.id == order_id))
     order = result.scalar_one_or_none()
     if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise HTTPException(status_code=404, detail=Msg.ORDER_NOT_FOUND)
 
     normalized = status.lower().strip()
     allowed_statuses = {
@@ -354,7 +355,7 @@ async def update_order_status(
         OrderStatus.CANCELLED.value: OrderStatus.CANCELLED,
     }
     if normalized not in allowed_statuses:
-        raise HTTPException(status_code=400, detail="Invalid status")
+        raise HTTPException(status_code=400, detail=Msg.INVALID_STATUS)
 
     order.status = allowed_statuses[normalized]
     if normalized == OrderStatus.PAID.value:
@@ -378,11 +379,11 @@ async def update_order_status(
             email_enabled=notification_settings.email_enabled if notification_settings else True,
             sms_enabled=notification_settings.sms_enabled if notification_settings else False,
             telegram_enabled=notification_settings.telegram_enabled if notification_settings else False,
-            message=f"Order {order.order_number}: status changed to {order.status.value}",
+            message=Msg.order_status_changed(order.order_number, order.status.value),
         )
 
     return {
-        "message": "Order status updated",
+        "message": Msg.STATUS_UPDATED,
         "order_id": order.id,
         "order_number": order.order_number,
         "status": order.status.value,
@@ -401,7 +402,7 @@ async def create_dispute(
     order_result = await db.execute(select(Order).where(Order.id == data.order_id, Order.user_id == current_user.id))
     order = order_result.scalar_one_or_none()
     if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise HTTPException(status_code=404, detail=Msg.ORDER_NOT_FOUND)
     
     item_result = await db.execute(select(OrderItem).where(OrderItem.order_id == order.id))
     first_item = item_result.scalars().first()
@@ -486,7 +487,7 @@ async def resolve_dispute(
     result = await db.execute(select(Dispute).where(Dispute.id == dispute_id))
     dispute = result.scalar_one_or_none()
     if not dispute:
-        raise HTTPException(status_code=404, detail="Dispute not found")
+        raise HTTPException(status_code=404, detail=Msg.DISPUTE_NOT_FOUND)
     
     dispute.status = DisputeStatus.RESOLVED
     dispute.admin_resolution = resolution
@@ -494,7 +495,7 @@ async def resolve_dispute(
     dispute.assigned_to = admin.id
     dispute.resolved_at = datetime.utcnow()
     await db.commit()
-    return {"message": "Dispute resolved"}
+    return {"message": Msg.DISPUTE_RESOLVED}
 
 # === ANALYTICS ===
 
@@ -598,7 +599,7 @@ async def add_to_stop_list(
 ):
     from app.services.risk_engine import StopListManager
     StopListManager.add(inn=inn, reason=reason, added_by=admin.id)
-    return {"message": "Added to stop list", "inn": inn}
+    return {"message": Msg.INN_ADDED_TO_STOP_LIST, "inn": inn}
 
 
 @router.delete("/stop-list/{inn}")
@@ -609,8 +610,8 @@ async def remove_from_stop_list(
     from app.services.risk_engine import StopListManager
     removed = StopListManager.remove(inn)
     if removed:
-        return {"message": "Removed from stop list", "inn": inn}
-    raise HTTPException(status_code=404, detail="INN not found in stop list")
+        return {"message": Msg.INN_REMOVED_FROM_STOP_LIST, "inn": inn}
+    raise HTTPException(status_code=404, detail=Msg.INN_NOT_IN_STOP_LIST)
 
 
 # === SUBSCRIPTION MANAGEMENT ===

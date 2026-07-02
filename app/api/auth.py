@@ -10,11 +10,12 @@ from app.core.database import get_db
 from app.core.security import verify_password, get_password_hash, create_access_token, decode_access_token
 from app.core.config import settings
 from app.core.enums import UserRole
+from app.core.messages import Msg
 from app.models.user import User
 from app.models.supplier import Supplier
 from app.schemas.user import UserCreate, UserResponse, Token, UserUpdate
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
+router = APIRouter(prefix="/auth", tags=["Аутентификация"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_PREFIX}/auth/token")
 
@@ -25,7 +26,7 @@ async def get_current_user(
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail=Msg.CREDENTIALS_INVALID,
         headers={"WWW-Authenticate": "Bearer"},
     )
     payload = decode_access_token(token)
@@ -43,7 +44,7 @@ async def get_current_user(
 
 async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
     if not current_user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise HTTPException(status_code=400, detail=Msg.INACTIVE_USER)
     return current_user
 
 
@@ -76,7 +77,7 @@ async def ensure_supplier_profile(user: User, db: AsyncSession) -> Supplier:
 async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == user_data.email))
     if result.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail=Msg.EMAIL_ALREADY_REGISTERED)
 
     import uuid
     user = User(
@@ -95,15 +96,15 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
         await db.rollback()
         msg = str(exc.orig) if getattr(exc, "orig", None) else str(exc)
         if "users.phone" in msg or "phone" in msg.lower():
-            raise HTTPException(status_code=400, detail="Phone already registered")
+            raise HTTPException(status_code=400, detail=Msg.PHONE_ALREADY_REGISTERED)
         if "users.email" in msg or "email" in msg.lower():
-            raise HTTPException(status_code=400, detail="Email already registered")
+            raise HTTPException(status_code=400, detail=Msg.EMAIL_ALREADY_REGISTERED)
         if "role" in msg.lower():
-            raise HTTPException(status_code=400, detail="Invalid role value")
-        raise HTTPException(status_code=400, detail=f"Registration failed: {msg}")
+            raise HTTPException(status_code=400, detail=Msg.INVALID_ROLE)
+        raise HTTPException(status_code=400, detail=Msg.registration_failed(msg))
     except Exception as exc:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Registration failed: {exc}")
+        raise HTTPException(status_code=500, detail=Msg.registration_failed(str(exc)))
 
     await db.refresh(user)
     if user.role == UserRole.SUPPLIER:
@@ -121,11 +122,11 @@ async def login(
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail=Msg.INCORRECT_CREDENTIALS,
             headers={"WWW-Authenticate": "Bearer"},
         )
     if not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise HTTPException(status_code=400, detail=Msg.INACTIVE_USER)
 
     access_token = create_access_token(
         data={"sub": user.id, "role": user.role.value},
@@ -198,7 +199,7 @@ async def request_password_reset(
     user = result.scalar_one_or_none()
     
     if not user:
-        raise HTTPException(status_code=404, detail="Аккаунт с такой почтой не найден. Пожалуйста, зарегистрируйтесь.")
+        raise HTTPException(status_code=404, detail=Msg.ACCOUNT_NOT_FOUND)
     
     # Generate simple reset code (6 digits)
     import random
@@ -244,7 +245,7 @@ async def request_password_reset(
     except Exception as e:
         print(f"Failed to send email: {e}")
     
-    return {"message": "If email exists, reset code will be sent"}
+    return {"message": Msg.RESET_CODE_SENT}
 
 
 @router.post("/password-reset/confirm")
@@ -257,19 +258,19 @@ async def confirm_password_reset(
     user = result.scalar_one_or_none()
     
     if not user:
-        raise HTTPException(status_code=400, detail="Invalid email or reset code")
+        raise HTTPException(status_code=400, detail=Msg.INVALID_RESET)
     
     # Check reset code
     reset_data = _reset_codes.get(data.email)
     if not reset_data:
-        raise HTTPException(status_code=400, detail="Reset code not requested or expired")
+        raise HTTPException(status_code=400, detail=Msg.RESET_NOT_REQUESTED)
     
     if reset_data["code"] != data.reset_code:
-        raise HTTPException(status_code=400, detail="Invalid reset code")
+        raise HTTPException(status_code=400, detail=Msg.INVALID_RESET_CODE)
     
     if __import__("datetime").datetime.utcnow() > reset_data["expires"]:
         del _reset_codes[data.email]
-        raise HTTPException(status_code=400, detail="Reset code expired")
+        raise HTTPException(status_code=400, detail=Msg.RESET_CODE_EXPIRED)
     
     # Update password
     user.hashed_password = get_password_hash(data.new_password)
@@ -278,4 +279,4 @@ async def confirm_password_reset(
     # Clear reset code
     del _reset_codes[data.email]
     
-    return {"message": "Password successfully reset"}
+    return {"message": Msg.PASSWORD_RESET_SUCCESS}

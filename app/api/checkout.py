@@ -19,8 +19,9 @@ from app.schemas.checkout import (
 )
 from app.api.auth import get_current_active_user
 from app.services import integration_service
+from app.core.messages import Msg
 
-router = APIRouter(prefix="/checkout", tags=["Checkout"])
+router = APIRouter(prefix="/checkout", tags=["Оформление заказа"])
 
 
 async def get_or_create_cart(user_id: str, db: AsyncSession) -> Cart:
@@ -127,7 +128,7 @@ async def add_to_cart(
         db.add(new_item)
     
     await db.commit()
-    return {"message": "Item added to cart"}
+    return {"message": Msg.ITEM_ADDED_TO_CART}
 
 
 @router.put("/cart/items/{item_id}")
@@ -147,7 +148,7 @@ async def update_cart_item(
     )
     item = result.scalar_one_or_none()
     if not item:
-        raise HTTPException(status_code=404, detail="Item not found in cart")
+        raise HTTPException(status_code=404, detail=Msg.CART_ITEM_NOT_FOUND)
     
     if quantity <= 0:
         await db.delete(item)
@@ -155,7 +156,7 @@ async def update_cart_item(
         item.quantity = quantity
     
     await db.commit()
-    return {"message": "Cart updated"}
+    return {"message": Msg.CART_UPDATED}
 
 
 @router.delete("/cart/items/{item_id}")
@@ -174,11 +175,11 @@ async def remove_from_cart(
     )
     item = result.scalar_one_or_none()
     if not item:
-        raise HTTPException(status_code=404, detail="Item not found in cart")
+        raise HTTPException(status_code=404, detail=Msg.CART_ITEM_NOT_FOUND)
     
     await db.delete(item)
     await db.commit()
-    return {"message": "Item removed from cart"}
+    return {"message": Msg.ITEM_REMOVED_FROM_CART}
 
 
 @router.delete("/cart")
@@ -196,7 +197,7 @@ async def clear_cart(
         await db.delete(item)
     
     await db.commit()
-    return {"message": "Cart cleared"}
+    return {"message": Msg.CART_CLEARED}
 
 
 @router.get("/delivery/estimates", response_model=List[DeliveryEstimate])
@@ -281,7 +282,7 @@ async def create_order(
     items = result.scalars().all()
     
     if not items:
-        raise HTTPException(status_code=400, detail="Cart is empty")
+        raise HTTPException(status_code=400, detail=Msg.CART_EMPTY)
     
     order_id = str(uuid.uuid4())
     order_number = f"TH-{datetime.now().strftime('%Y%m%d')}-{order_id[:8].upper()}"
@@ -369,7 +370,7 @@ async def create_order(
         email_enabled=notification_settings.email_enabled if notification_settings else True,
         sms_enabled=notification_settings.sms_enabled if notification_settings else False,
         telegram_enabled=notification_settings.telegram_enabled if notification_settings else False,
-        message=f"Order {order_number}: status changed to {OrderStatus.PENDING.value}",
+        message=Msg.order_status_changed(order_number, OrderStatus.PENDING.value),
     )
 
     payment_url = None
@@ -405,7 +406,7 @@ async def get_payment_url(
     )
     order = result.scalar_one_or_none()
     if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise HTTPException(status_code=404, detail=Msg.ORDER_NOT_FOUND)
     
     payment_url = None
     if payment_method == "card_online":

@@ -14,6 +14,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from app.core.logging import get_logger
+from app.core.messages import Msg
 
 logger = get_logger(__name__)
 
@@ -50,7 +51,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             logger.warning("rate_limit_exceeded", extra={"extra": {"ip": client_ip, "path": path}})
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                content={"detail": "Rate limit exceeded. Try again later."},
+                content={"detail": Msg.RATE_LIMIT_EXCEEDED},
             )
 
         self._requests[key].append(now)

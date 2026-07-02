@@ -17,8 +17,9 @@ from app.schemas.rma import (
 )
 from app.api.auth import get_current_active_user
 from app.services import integration_service
+from app.core.messages import Msg
 
-router = APIRouter(prefix="/returns", tags=["Returns (RMA)"])
+router = APIRouter(prefix="/returns", tags=["Возвраты"])
 
 
 @router.post("/", response_model=ReturnRequestResponse)
@@ -30,10 +31,10 @@ async def create_return_request(
     order_result = await db.execute(select(Order).where(Order.id == request_data.order_id))
     order = order_result.scalar_one_or_none()
     if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise HTTPException(status_code=404, detail=Msg.ORDER_NOT_FOUND)
     
     if order.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not your order")
+        raise HTTPException(status_code=403, detail=Msg.NOT_YOUR_ORDER)
     
     refund_amount = 0.0
     supplier_id = None
@@ -163,10 +164,10 @@ async def get_return_request(
     result = await db.execute(select(ReturnRequest).where(ReturnRequest.id == return_id))
     r = result.scalar_one_or_none()
     if not r:
-        raise HTTPException(status_code=404, detail="Return request not found")
+        raise HTTPException(status_code=404, detail=Msg.RETURN_NOT_FOUND)
     
     if r.user_id != current_user.id and current_user.role.value not in ["admin", "manager"]:
-        raise HTTPException(status_code=403, detail="Access denied")
+        raise HTTPException(status_code=403, detail=Msg.ACCESS_DENIED)
     
     order_result = await db.execute(select(Order).where(Order.id == r.order_id))
     order = order_result.scalar_one_or_none()
@@ -214,7 +215,7 @@ async def update_return_status(
     result = await db.execute(select(ReturnRequest).where(ReturnRequest.id == return_id))
     r = result.scalar_one_or_none()
     if not r:
-        raise HTTPException(status_code=404, detail="Return request not found")
+        raise HTTPException(status_code=404, detail=Msg.RETURN_NOT_FOUND)
     
     r.status = status_update.status
     if status_update.admin_notes:
@@ -245,9 +246,9 @@ async def update_return_status(
         email_enabled=notification_settings.email_enabled if notification_settings else True,
         sms_enabled=notification_settings.sms_enabled if notification_settings else False,
         telegram_enabled=notification_settings.telegram_enabled if notification_settings else False,
-        message=f"Return {r.id}: status changed to {r.status.value}",
+        message=Msg.return_status_changed(r.id, r.status.value),
     )
-    return {"message": "Return status updated"}
+    return {"message": Msg.RETURN_STATUS_UPDATED}
 
 
 @router.put("/{return_id}/tracking")
@@ -259,10 +260,10 @@ async def update_return_tracking(
     result = await db.execute(select(ReturnRequest).where(ReturnRequest.id == return_id))
     r = result.scalar_one_or_none()
     if not r:
-        raise HTTPException(status_code=404, detail="Return request not found")
+        raise HTTPException(status_code=404, detail=Msg.RETURN_NOT_FOUND)
     
     r.tracking_number = tracking.tracking_number
     await db.commit()
-    return {"message": "Tracking number updated"}
+    return {"message": Msg.TRACKING_UPDATED}
 
 

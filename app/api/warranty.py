@@ -12,7 +12,7 @@ from app.core.database import get_db
 from app.models.warranty import NotificationSettings, ServiceReminder, Warranty
 from app.services.integration_service import integration_service
 
-router = APIRouter(prefix="/warranty", tags=["warranty"])
+router = APIRouter(prefix="/warranty", tags=["Гарантия"])
 
 
 class WarrantyResponse(BaseModel):

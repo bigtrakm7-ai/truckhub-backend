@@ -9,8 +9,9 @@ from app.core.database import get_db
 from app.api.auth import get_current_active_user
 from app.models.chat import ChatConversation, ChatMessage
 from app.models.user import User
+from app.core.messages import Msg
 
-router = APIRouter(prefix="/chat", tags=["chat"])
+router = APIRouter(prefix="/chat", tags=["Чат"])
 
 
 class MessageCreate(BaseModel):
@@ -69,7 +70,7 @@ def get_messages(conversation_id: str, db: Session = Depends(get_db), current_us
     ).first()
     
     if not conversation:
-        raise HTTPException(status_code=404, detail="Р‘РµСЃРµРґР° РЅРµ РЅР°Р№РґРµРЅР°")
+        raise HTTPException(status_code=404, detail=Msg.CONVERSATION_NOT_FOUND)
     
     messages = db.query(ChatMessage).filter(
         ChatMessage.conversation_id == conversation_id
@@ -116,7 +117,7 @@ def send_message(data: MessageCreate, db: Session = Depends(get_db), current_use
     ).first()
     
     if not conversation:
-        raise HTTPException(status_code=404, detail="Conversation not found")
+        raise HTTPException(status_code=404, detail=Msg.CONVERSATION_NOT_FOUND)
 
     moderation = moderate_message(data.content)
     content_to_save = moderation.sanitized_content if not moderation.is_clean else data.content
@@ -152,14 +153,14 @@ def block_conversation(conversation_id: str, db: Session = Depends(get_db), curr
     ).first()
     
     if not conversation:
-        raise HTTPException(status_code=404, detail="Р‘РµСЃРµРґР° РЅРµ РЅР°Р№РґРµРЅР°")
+        raise HTTPException(status_code=404, detail=Msg.CONVERSATION_NOT_FOUND)
     
     if current_user.id == conversation.buyer_id:
         conversation.is_buyer_blocked = True
     elif current_user.id == conversation.supplier_id:
         conversation.is_supplier_blocked = True
     else:
-        raise HTTPException(status_code=403, detail="РќРµС‚ РґРѕСЃС‚СѓРїР°")
+        raise HTTPException(status_code=403, detail=Msg.ACCESS_DENIED)
     
     db.commit()
     return {"status": "ok"}

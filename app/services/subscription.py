@@ -11,6 +11,7 @@ from enum import Enum
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 from app.core.logging import get_logger
+from app.core.messages import Msg
 
 logger = get_logger(__name__)
 
@@ -81,7 +82,7 @@ class SubscriptionService:
                 "allowed": False,
                 "current_tier": user_tier,
                 "required_tier": upgrade_to,
-                "message": f"This feature requires {upgrade_to.value} subscription or higher.",
+                "message": Msg.subscription_required(upgrade_to.value),
                 "upgrade_url": f"/billing/upgrade?to={upgrade_to.value}",
             }
         
@@ -112,19 +113,19 @@ class SubscriptionService:
             SubscriptionTier.FREE: {
                 "price_rub": 0,
                 "price_usd": 0,
-                "description": "Basic dashboard access",
+                "description": "Базовый доступ к панели управления",
                 "features": ["dashboard_basic"],
             },
             SubscriptionTier.BASIC: {
                 "price_rub": 990,
                 "price_usd": 12,
-                "description": "Advanced analytics + CSV export",
+                "description": "Расширенная аналитика и экспорт в CSV",
                 "features": ["dashboard_basic", "dashboard_advanced", "export_csv"],
             },
             SubscriptionTier.PRO: {
                 "price_rub": 2990,
                 "price_usd": 35,
-                "description": "Competitor analysis + API access",
+                "description": "Анализ конкурентов и доступ к API",
                 "features": [
                     "dashboard_basic", "dashboard_advanced", "export_csv",
                     "export_pdf", "competitor_analysis", "api_access",
@@ -133,7 +134,7 @@ class SubscriptionService:
             SubscriptionTier.ENTERPRISE: {
                 "price_rub": 9990,
                 "price_usd": 120,
-                "description": "Custom reports + dedicated support",
+                "description": "Пользовательские отчёты и персональная поддержка",
                 "features": list(FEATURE_MATRIX.keys()),
             },
         }

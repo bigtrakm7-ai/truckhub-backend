@@ -15,8 +15,9 @@ from app.core.rbac import require_roles
 from app.models.ticket import Ticket, TicketComment, TicketStatus, TicketPriority, TicketCategory
 from app.models.user import User
 from pydantic import BaseModel
+from app.core.messages import Msg
 
-router = APIRouter(prefix="/support", tags=["Support"])
+router = APIRouter(prefix="/support", tags=["Поддержка"])
 
 # ── SLA config ───────────────────────────────────────────────────────
 
@@ -191,7 +192,7 @@ async def get_ticket(
     result = await db.execute(select(Ticket).where(Ticket.id == ticket_id))
     ticket = result.scalar_one_or_none()
     if not ticket:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=Msg.TICKET_NOT_FOUND)
 
     comments_result = await db.execute(
         select(TicketComment).where(TicketComment.ticket_id == ticket_id)
@@ -249,12 +250,12 @@ async def assign_ticket(
     result = await db.execute(select(Ticket).where(Ticket.id == ticket_id))
     ticket = result.scalar_one_or_none()
     if not ticket:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=Msg.TICKET_NOT_FOUND)
 
     assignee_result = await db.execute(select(User).where(User.id == data.assignee_id))
     assignee = assignee_result.scalar_one_or_none()
     if not assignee or assignee.role not in (UserRole.MANAGER, UserRole.ADMIN):
-        raise HTTPException(status_code=400, detail="Assignee must be a manager or admin")
+        raise HTTPException(status_code=400, detail=Msg.ASSIGNEE_MUST_BE_MANAGER)
 
     ticket.assignee_id = data.assignee_id
     if ticket.status == TicketStatus.OPEN:
@@ -276,10 +277,10 @@ async def update_ticket_status(
     result = await db.execute(select(Ticket).where(Ticket.id == ticket_id))
     ticket = result.scalar_one_or_none()
     if not ticket:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=Msg.TICKET_NOT_FOUND)
 
     if data.status not in TicketStatus.ALL:
-        raise HTTPException(status_code=400, detail=f"Invalid status. Valid: {', '.join(TicketStatus.ALL)}")
+        raise HTTPException(status_code=400, detail=Msg.invalid_status_valid(", ".join(TicketStatus.ALL)))
 
     ticket.status = data.status
     if data.priority and data.priority in TicketPriority.ALL:
@@ -308,7 +309,7 @@ async def add_comment(
     result = await db.execute(select(Ticket).where(Ticket.id == ticket_id))
     ticket = result.scalar_one_or_none()
     if not ticket:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=Msg.TICKET_NOT_FOUND)
 
     comment = TicketComment(
         id=str(uuid.uuid4()),
@@ -346,9 +347,9 @@ async def create_ticket(
     db: AsyncSession = Depends(get_db),
 ):
     if data.category not in TicketCategory.ALL:
-        raise HTTPException(status_code=400, detail=f"Invalid category. Valid: {', '.join(TicketCategory.ALL)}")
+        raise HTTPException(status_code=400, detail=Msg.invalid_category_valid(", ".join(TicketCategory.ALL)))
     if data.priority not in TicketPriority.ALL:
-        raise HTTPException(status_code=400, detail=f"Invalid priority. Valid: {', '.join(TicketPriority.ALL)}")
+        raise HTTPException(status_code=400, detail=Msg.invalid_priority_valid(", ".join(TicketPriority.ALL)))
 
     ticket_id = str(uuid.uuid4())
     ticket_number = f"TH-{datetime.now().strftime('%Y%m%d')}-{ticket_id[:6].upper()}"
@@ -429,7 +430,7 @@ async def get_my_ticket(
     )
     ticket = result.scalar_one_or_none()
     if not ticket:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=Msg.TICKET_NOT_FOUND)
 
     comments_result = await db.execute(
         select(TicketComment).where(
@@ -475,10 +476,10 @@ async def add_my_comment(
     )
     ticket = result.scalar_one_or_none()
     if not ticket:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=Msg.TICKET_NOT_FOUND)
 
     if ticket.status in (TicketStatus.RESOLVED, TicketStatus.CLOSED):
-        raise HTTPException(status_code=400, detail="Ticket is already resolved/closed")
+        raise HTTPException(status_code=400, detail=Msg.TICKET_ALREADY_CLOSED)
 
     comment = TicketComment(
         id=str(uuid.uuid4()),

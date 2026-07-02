@@ -13,8 +13,9 @@ from app.models.order import Order, OrderItem
 from app.models.supplier import Supplier
 from app.models.user import User
 from app.core.enums import UserRole
+from app.core.messages import Msg
 
-router = APIRouter(prefix="/reviews", tags=["reviews"])
+router = APIRouter(prefix="/reviews", tags=["Отзывы"])
 
 
 class ReviewCreate(BaseModel):
@@ -73,7 +74,7 @@ def create_review(
     ).first()
     
     if not order:
-        raise HTTPException(status_code=404, detail="Заказ не найден")
+        raise HTTPException(status_code=404, detail=Msg.ORDER_NOT_FOUND)
     
     # Проверяем что заказ завершен
     if order.status.value not in ["delivered", "completed"]:
@@ -223,7 +224,7 @@ def delete_review(
     
     # Только автор или админ может удалить
     if review.buyer_id != current_user.id and current_user.role != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Нет доступа")
+        raise HTTPException(status_code=403, detail=Msg.ACCESS_DENIED)
     
     supplier_id = review.supplier_id
     

@@ -15,8 +15,9 @@ from app.models.product import Product
 from app.models.supplier import Supplier
 from app.models.user import User
 from app.schemas.order import OrderCreate, OrderListResponse, OrderResponse, OrderUpdate
+from app.core.messages import Msg
 
-router = APIRouter(prefix="/orders", tags=["Orders"])
+router = APIRouter(prefix="/orders", tags=["Заказы"])
 
 
 def _serialize_shipments(items: list[OrderItem], shipments: list[Shipment] | None = None) -> list[dict]:
@@ -133,7 +134,7 @@ async def create_order(
         result = await db.execute(select(Product).where(Product.id == item_data.product_id))
         product = result.scalar_one_or_none()
         if not product:
-            raise HTTPException(status_code=404, detail=f"Product {item_data.product_id} not found")
+            raise HTTPException(status_code=404, detail=Msg.product_not_found_id(item_data.product_id))
 
         item_total = product.price * item_data.quantity
         total_amount += item_total
@@ -280,7 +281,7 @@ async def get_order(
     result = await db.execute(select(Order).where(Order.id == order_id, Order.user_id == current_user.id))
     order = result.scalar_one_or_none()
     if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise HTTPException(status_code=404, detail=Msg.ORDER_NOT_FOUND)
 
     items_result = await db.execute(select(OrderItem).where(OrderItem.order_id == order.id))
     items = items_result.scalars().all()
@@ -304,7 +305,7 @@ async def update_order(
     result = await db.execute(select(Order).where(Order.id == order_id, Order.user_id == current_user.id))
     order = result.scalar_one_or_none()
     if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise HTTPException(status_code=404, detail=Msg.ORDER_NOT_FOUND)
 
     update_data = order_data.dict(exclude_unset=True)
     for field, value in update_data.items():
@@ -334,7 +335,7 @@ async def get_order_shipments(
     result = await db.execute(select(Order).where(Order.id == order_id, Order.user_id == current_user.id))
     order = result.scalar_one_or_none()
     if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise HTTPException(status_code=404, detail=Msg.ORDER_NOT_FOUND)
 
     shipments_result = await db.execute(select(Shipment).where(Shipment.order_id == order.id))
     shipments = shipments_result.scalars().all()
@@ -396,17 +397,17 @@ async def update_shipment(
     result = await db.execute(select(Order).where(Order.id == order_id, Order.user_id == current_user.id))
     order = result.scalar_one_or_none()
     if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise HTTPException(status_code=404, detail=Msg.ORDER_NOT_FOUND)
 
     shipment_result = await db.execute(select(Shipment).where(Shipment.id == shipment_id, Shipment.order_id == order_id))
     shipment = shipment_result.scalar_one_or_none()
     if not shipment:
-        raise HTTPException(status_code=404, detail="Shipment not found")
+        raise HTTPException(status_code=404, detail=Msg.SHIPMENT_NOT_FOUND)
 
     if status:
         valid = {"pending", "confirmed", "assembling", "shipped", "in_transit", "delivered", "cancelled"}
         if status not in valid:
-            raise HTTPException(status_code=400, detail=f"Invalid status. Valid: {', '.join(valid)}")
+            raise HTTPException(status_code=400, detail=Msg.invalid_status_valid(", ".join(valid)))
         shipment.status = status
 
         items_result = await db.execute(

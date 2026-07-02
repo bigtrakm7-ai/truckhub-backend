@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.enums import UserRole
 from app.core.security import decode_access_token
+from app.core.messages import Msg
 from app.models.user import User
 
 
@@ -21,7 +22,7 @@ async def get_current_active_user_for_rbac(
 ) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail=Msg.CREDENTIALS_INVALID,
         headers={"WWW-Authenticate": "Bearer"},
     )
 
@@ -39,7 +40,7 @@ async def get_current_active_user_for_rbac(
         raise credentials_exception
 
     if not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+        raise HTTPException(status_code=400, detail=Msg.INACTIVE_USER)
 
     return user
 
@@ -58,7 +59,7 @@ def require_roles(*allowed_roles: UserRole) -> Callable:
         if role_value not in allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient role permissions",
+                detail=Msg.INSUFFICIENT_PERMISSIONS,
             )
         return current_user
 

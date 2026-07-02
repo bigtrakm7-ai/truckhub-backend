@@ -23,6 +23,7 @@ from app.services.notification_schema import (
     validate_notification_payload,
     safe_notification_result,
 )
+from app.core.messages import Msg
 from app.services.delivery_schema import (
     DeliveryEstimateRequest,
     validate_delivery_payload,
@@ -83,7 +84,7 @@ class IntegrationService:
         elif req.provider == "delovye_linii":
             raw = self.dl_provider.estimate(payload)
         else:
-            raise ValueError("unsupported provider")
+            raise ValueError(Msg.UNSUPPORTED_PROVIDER)
 
         return normalize_delivery_response(
             provider=raw.get("provider", req.provider),
@@ -110,7 +111,7 @@ class IntegrationService:
             return self.sms_provider.send(to=p.to, message=p.message)
         if p.channel == "telegram":
             return self.telegram_provider.send(to=p.to, message=p.message)
-        raise ValueError("unsupported channel")
+        raise ValueError(Msg.UNSUPPORTED_CHANNEL)
 
     def send_notification(self, channel: str, to: str, message: str) -> Dict[str, Any]:
         try:
@@ -127,12 +128,12 @@ class IntegrationService:
 
     def notify_order_status_changed(self, *, user_email: Optional[str], order_number: str, status: str) -> Dict[str, Any]:
         recipient = user_email or ""
-        msg = f"Order {order_number}: status changed to {status}"
+        msg = Msg.order_status_changed(order_number, status)
         return self.send_notification(channel="email", to=recipient, message=msg)
 
     def notify_return_status_changed(self, *, user_email: Optional[str], return_id: str, status: str) -> Dict[str, Any]:
         recipient = user_email or ""
-        msg = f"Return {return_id}: status changed to {status}"
+        msg = Msg.return_status_changed(return_id, status)
         return self.send_notification(channel="email", to=recipient, message=msg)
 
     def notify_with_preferences(
@@ -164,7 +165,7 @@ class IntegrationService:
         if not results:
             results["skipped"] = {
                 "status": "skipped",
-                "reason": "no_enabled_channels_or_contacts",
+                "reason": "нет_включённых_каналов_или_контактов",
             }
 
         return results
