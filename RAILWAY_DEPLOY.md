@@ -2,6 +2,35 @@
 
 Сайт проекта: **https://truckgrad.ru**
 
+## Переименование репозитория на GitHub
+
+Текущее имя: `truckhub-backend` → рекомендуемое: **`truckgrad-backend`**
+
+1. Откройте https://github.com/bigtrakm7-ai/truckhub-backend/settings
+2. В разделе **Repository name** введите `truckgrad-backend` и нажмите **Rename**
+3. Локально обновите remote:
+   ```bash
+   git remote set-url origin https://github.com/bigtrakm7-ai/truckgrad-backend.git
+   ```
+4. Обновите описание репозитория: *TruckGrad API — backend маркетплейса запчастей*
+
+> Переименование делает владелец репозитория. У Cloud Agent нет прав на rename через API.
+
+## Брендинг Frontend (truckgrad.ru)
+
+Репозиторий frontend **не подключён** к этому workspace. На проде (`truckgrad.ru`) ещё остались следы TruckHub:
+
+| Где | Сейчас | Нужно |
+|-----|--------|-------|
+| `public/manifest.json` | `TruckHub` | `TruckGrad` |
+| `VITE_API_BASE_URL` | `https://truckhub-api.onrender.com` | URL вашего TruckGrad API |
+| localStorage-ключи | `truckhub_access_token`, `truckhub_favorites_*` | `truckgrad_*` (с миграцией старых ключей) |
+| Custom events | `truckhub:favorites-changed` | `truckgrad:favorites-changed` |
+
+После правок в frontend-репозитории: пересоберите и задеплойте на домен `truckgrad.ru`.
+
+**Не путать:** `truckhub.vercel.app` — отдельный проект (грузоперевозки), к TruckGrad не относится.
+
 ## Шаг 1: Установка Railway CLI
 
 ```powershell
