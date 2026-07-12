@@ -13,7 +13,17 @@ if (-not (Test-Path $Backend)) {
 
 Set-Location $Backend
 Write-Host "`n[1/4] Backend: git pull..." -ForegroundColor Yellow
-git pull origin master
+git pull origin master 2>&1 | Out-Host
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "git pull не удался — сохраняю локальные правки в stash и повторяю..." -ForegroundColor Yellow
+    git stash push -m "truckgrad-auto-stash-$(Get-Date -Format 'yyyyMMdd-HHmm')"
+    git pull origin master
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Ошибка git pull. Выполните вручную: git stash && git pull origin master" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "Локальные изменения в stash. Вернуть: git stash pop" -ForegroundColor DarkYellow
+}
 
 Write-Host "[2/4] Backend: pip install..." -ForegroundColor Yellow
 python -m pip install -r requirements.txt

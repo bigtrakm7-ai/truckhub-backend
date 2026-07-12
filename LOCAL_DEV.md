@@ -95,6 +95,25 @@ git pull origin master
 pip install -r requirements.txt
 ```
 
+### Ошибка «Your local changes would be overwritten»
+
+```powershell
+cd C:\Users\MANAGER1\.verdent\verdent-projects\TruckHub\backend
+git stash push -m "backup"
+git pull origin master
+powershell -ExecutionPolicy Bypass -File scripts\setup-local-dev.ps1
+.\scripts\start-truckgrad-dev.bat
+```
+
+Или одной командой: `scripts\fix-git-pull.bat`
+
+Если локальные правки **не нужны** (взять всё с GitHub):
+
+```powershell
+git reset --hard origin/master
+git pull origin master
+```
+
 ## Frontend → TruckGrad
 
 См. `scripts/migrate-frontend-branding.md`
