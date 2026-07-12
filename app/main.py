@@ -42,6 +42,11 @@ setup_logging(settings.LOG_LEVEL)
 logger = get_logger(__name__)
 
 
+def _cors_origins() -> list[str]:
+    origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
+    return origins if settings.ENV == "production" and origins else ["*"]
+
+
 async def seed_demo_data():
     """Auto-seed on startup if DB is empty"""
     try:
@@ -203,7 +208,7 @@ async def validation_exception_handler(_request, exc: RequestValidationError):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
 
+    # CORS (через запятую; пусто = разрешить все для dev)
+    CORS_ORIGINS: str = "https://truckgrad.ru,https://www.truckgrad.ru,https://truckhub-frontend-phi.vercel.app,http://127.0.0.1:3023,http://localhost:3023"
+
     # JWT
     SECRET_KEY: str = "your-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
