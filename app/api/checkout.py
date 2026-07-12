@@ -5,6 +5,7 @@ from typing import List, Optional
 from datetime import datetime
 import uuid
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.enums import OrderStatus, PaymentStatus
 from app.models.user import User
@@ -57,7 +58,7 @@ async def get_cart(
         if not product:
             continue
         
-        supplier_name = "TruckHub"
+        supplier_name = settings.PROJECT_NAME
         if product.supplier_id:
             sup_result = await db.execute(select(Supplier).where(Supplier.id == product.supplier_id))
             sup = sup_result.scalar_one_or_none()
@@ -210,7 +211,7 @@ async def get_delivery_estimates(
     estimates = [
         DeliveryEstimate(
             method="courier",
-            name="Курьер TruckHub",
+            name=f"Курьер {settings.PROJECT_NAME}",
             price=350 if weight < 5 else 600,
             days_min=1,
             days_max=2,
@@ -299,7 +300,7 @@ async def create_order(
         total_price = product.price * item.quantity
         subtotal += total_price
         
-        supplier_name = "TruckHub"
+        supplier_name = settings.PROJECT_NAME
         if product.supplier_id:
             supplier_result = await db.execute(select(Supplier).where(Supplier.id == product.supplier_id))
             supplier = supplier_result.scalar_one_or_none()
@@ -375,10 +376,10 @@ async def create_order(
 
     payment_url = None
     if checkout_data.payment_method == "card_online":
-        payment_url = f"https://payment.truckhub.ru/order/{order_number}"
+        payment_url = f"https://payment.truckgrad.ru/order/{order_number}"
         order.payment_url = payment_url
     elif checkout_data.payment_method == "sbp":
-        payment_url = f"https://sbp.truckhub.ru/order/{order_number}"
+        payment_url = f"https://sbp.truckgrad.ru/order/{order_number}"
         order.payment_url = payment_url
     
     return OrderCreateResponse(
@@ -410,9 +411,9 @@ async def get_payment_url(
     
     payment_url = None
     if payment_method == "card_online":
-        payment_url = f"https://payment.truckhub.ru/order/{order.order_number}"
+        payment_url = f"https://payment.truckgrad.ru/order/{order.order_number}"
     elif payment_method == "sbp":
-        payment_url = f"https://sbp.truckhub.ru/order/{order.order_number}"
+        payment_url = f"https://sbp.truckgrad.ru/order/{order.order_number}"
     
     return {
         "payment_url": payment_url,

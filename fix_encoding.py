@@ -2,7 +2,7 @@ import sqlite3
 from pathlib import Path
 
 
-DB_PATH = Path(__file__).resolve().parent / "truckhub.db"
+DB_PATH = Path(__file__).resolve().parent / "truckgrad.db"
 
 
 def fix_mojibake(value: str | None) -> str | None:

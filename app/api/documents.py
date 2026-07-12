@@ -66,10 +66,10 @@ def _register_pdf_fonts():
     bold_font = next((path for path in bold_candidates if path.exists()), None)
 
     if regular_font and bold_font:
-        pdfmetrics.registerFont(TTFont("TruckHubArial", str(regular_font)))
-        pdfmetrics.registerFont(TTFont("TruckHubArialBold", str(bold_font)))
-        FONT_NAME = "TruckHubArial"
-        FONT_BOLD = "TruckHubArialBold"
+        pdfmetrics.registerFont(TTFont("TruckGradArial", str(regular_font)))
+        pdfmetrics.registerFont(TTFont("TruckGradArialBold", str(bold_font)))
+        FONT_NAME = "TruckGradArial"
+        FONT_BOLD = "TruckGradArialBold"
 
 
 def _draw_text(pdf: canvas.Canvas, text: str, x: float, y: float, bold: bool = False, size: int = 10):
@@ -252,7 +252,7 @@ def _render_invoice_pdf(pdf: canvas.Canvas, invoice: dict):
     width, height = A4
     margin_x = 18 * mm
     y = height - 22 * mm
-    _draw_text(pdf, "TruckHub", margin_x, y, bold=True, size=18)
+    _draw_text(pdf, "TruckGrad", margin_x, y, bold=True, size=18)
     y -= 10 * mm
     _draw_text(pdf, f"Счет {invoice['invoice_number']}", margin_x, y, bold=True, size=16)
     _draw_text(pdf, f"Заказ: {invoice['order_number']}", 125 * mm, y, size=10)
@@ -296,7 +296,7 @@ def _render_upd_pdf(pdf: canvas.Canvas, upd: dict):
     width, height = A4
     margin_x = 18 * mm
     y = height - 22 * mm
-    _draw_text(pdf, "TruckHub", margin_x, y, bold=True, size=18)
+    _draw_text(pdf, "TruckGrad", margin_x, y, bold=True, size=18)
     y -= 10 * mm
     _draw_text(pdf, f"УПД {upd['invoice_number']}", margin_x, y, bold=True, size=16)
     _draw_text(pdf, f"Заказ: {upd['order_number']}", 125 * mm, y, size=10)
@@ -325,7 +325,7 @@ def _render_act_pdf(pdf: canvas.Canvas, act: dict):
     width, height = A4
     margin_x = 18 * mm
     y = height - 22 * mm
-    _draw_text(pdf, "TruckHub Service", margin_x, y, bold=True, size=18)
+    _draw_text(pdf, "Сервис TruckGrad", margin_x, y, bold=True, size=18)
     y -= 10 * mm
     _draw_text(pdf, f"Акт {act['act_number']}", margin_x, y, bold=True, size=16)
     _draw_text(pdf, f"Заказ: {act['order_number']}", 125 * mm, y, size=10)
@@ -370,7 +370,7 @@ def _build_shipment_invoice(order: Order, shipment: dict, current_user: User) ->
         "shipment_supplier_name": shipment["supplier_name"],
         "date": datetime.now().isoformat(),
         "seller": {
-            "name": shipment["supplier_name"] or "TruckHub Supplier",
+            "name": shipment["supplier_name"] or "Поставщик TruckGrad",
             "inn": "0000000000",
             "address": "г. Москва, адрес поставщика",
         },
@@ -405,7 +405,7 @@ def _build_shipment_upd(order: Order, shipment: dict, current_user: User) -> dic
         "shipment_supplier_name": shipment["supplier_name"],
         "date": datetime.now().isoformat(),
         "seller": {
-            "name": shipment["supplier_name"] or "TruckHub Supplier",
+            "name": shipment["supplier_name"] or "Поставщик TruckGrad",
             "inn": "0000000000",
             "address": "г. Москва, адрес поставщика",
         },
@@ -465,7 +465,7 @@ async def generate_invoice(
         "order_number": order.order_number,
         "date": datetime.now().isoformat(),
         "seller": {
-            "name": "TruckHub",
+            "name": "TruckGrad",
             "inn": "0000000000",
             "address": "г. Москва, ул. Примерная, д. 1",
         },
@@ -508,7 +508,7 @@ async def generate_upd(
         "order_number": order.order_number,
         "date": datetime.now().isoformat(),
         "seller": {
-            "name": "TruckHub",
+            "name": "TruckGrad",
             "inn": "0000000000",
             "address": "г. Москва, ул. Примерная, д. 1",
         },
@@ -553,7 +553,7 @@ async def generate_act(
         "order_number": order.order_number,
         "date": datetime.now().isoformat(),
         "executor": {
-            "name": "TruckHub Service",
+            "name": "Сервис TruckGrad",
             "inn": "0000000000",
             "address": "г. Москва, ул. Сервисная, д. 1",
         },
@@ -571,7 +571,7 @@ async def generate_act(
             for item in installation_items
         ],
         "total_amount": sum(item.total_price for item in installation_items),
-        "signature_executor": "TruckHub",
+        "signature_executor": "TruckGrad",
         "signature_customer": current_user.email,
         "lifecycle": _build_document_lifecycle(order, items, has_installation),
     }

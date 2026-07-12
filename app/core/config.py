@@ -3,7 +3,8 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "TruckHub"
+    PROJECT_NAME: str = "TruckGrad"
+    SITE_URL: str = "https://truckgrad.ru"
     VERSION: str = "1.0.0"
     API_PREFIX: str = "/api/v1"
 
@@ -12,7 +13,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     # Database (SQLite by default for local development)
-    DATABASE_URL: str = "sqlite+aiosqlite:///./truckhub.db"
+    DATABASE_URL: str = "sqlite+aiosqlite:///./truckgrad.db"
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379"

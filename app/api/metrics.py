@@ -68,7 +68,7 @@ class PrometheusMiddleware:
     
     def __init__(self, app):
         self.app = app
-        APP_INFO.info({"version": "1.0.0", "name": "truckhub"})
+        APP_INFO.info({"version": "1.0.0", "name": "truckgrad"})
     
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":

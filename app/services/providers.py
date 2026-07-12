@@ -307,11 +307,12 @@ class HttpEmailProvider:
             import smtplib
             from email.mime.text import MIMEText
             from email.mime.multipart import MIMEMultipart
+            from app.core.config import settings
 
             msg = MIMEMultipart()
             msg["From"] = self.smtp_user
             msg["To"] = to
-            msg["Subject"] = "TruckHub — уведомление"
+            msg["Subject"] = f"{settings.PROJECT_NAME} — уведомление"
             msg.attach(MIMEText(message, "html", "utf-8"))
 
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:

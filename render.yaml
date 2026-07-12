@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: truckhub-api
+    name: truckgrad-api
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
@@ -9,18 +9,18 @@ services:
         value: 3.11.0
       - key: DATABASE_URL
         fromDatabase:
-          name: truckhub-db
+          name: truckgrad-db
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
       - key: CORS_ORIGINS
-        value: "https://truckhub.vercel.app,https://www.truckhub.vercel.app"
+        value: "https://truckgrad.ru,https://www.truckgrad.ru"
 
   - type: redis
-    name: truckhub-redis
+    name: truckgrad-redis
     ipAllowList: []
 
 databases:
-  - name: truckhub-db
-    databaseName: truckhub
-    user: truckhub
+  - name: truckgrad-db
+    databaseName: truckgrad
+    user: truckgrad

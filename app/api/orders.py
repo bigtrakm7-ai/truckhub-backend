@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import get_current_active_user
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.enums import OrderStatus
 from app.models.order import Order, OrderItem, Shipment, ShipmentStatus
@@ -141,7 +142,7 @@ async def create_order(
 
         supplier_key = product.supplier_id or "default"
         if supplier_key not in supplier_groups:
-            supplier_name = "TruckHub"
+            supplier_name = settings.PROJECT_NAME
             if product.supplier_id:
                 sup_result = await db.execute(select(Supplier).where(Supplier.id == product.supplier_id))
                 sup = sup_result.scalar_one_or_none()

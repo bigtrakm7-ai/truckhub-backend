@@ -5,6 +5,7 @@ from typing import List
 from datetime import datetime, timedelta
 import uuid
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.user import User
 from app.models.order import Order
@@ -303,7 +304,7 @@ async def get_referral_info(
 ):
     return ReferralProgramResponse(
         referral_code=current_user.id[:8].upper(),
-        referral_link=f"https://truckhub.ru/ref/{current_user.id[:8]}",
+        referral_link=f"{settings.SITE_URL}/ref/{current_user.id[:8]}",
         referrals_count=15,
         earned_amount=25000,
         pending_amount=5000,

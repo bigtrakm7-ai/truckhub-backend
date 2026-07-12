@@ -1,4 +1,4 @@
-"""Integration tests for TruckHub API.
+"""Integration tests for TruckGrad API.
 
 Tests full request/response cycles with database.
 """

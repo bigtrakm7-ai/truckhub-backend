@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import get_current_active_user
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.warranty import NotificationSettings, ServiceReminder, Warranty
 from app.services.integration_service import integration_service
@@ -227,7 +228,7 @@ async def test_push_notification(current_user=Depends(get_current_active_user)):
     result = integration_service.send_notification(
         channel="telegram",
         to=current_user.email,
-        message="Тестовое уведомление TruckHub",
+        message=f"Тестовое уведомление {settings.PROJECT_NAME}",
     )
     return {
         "status": "ok",
