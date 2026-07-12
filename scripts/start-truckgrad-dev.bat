@@ -6,7 +6,7 @@ set BACKEND=C:\Users\MANAGER1\.verdent\verdent-projects\TruckHub\backend
 set FRONTEND=C:\Users\MANAGER1\.verdent\verdent-projects\TruckHub\frontend
 
 echo Запуск TruckGrad Backend на http://127.0.0.1:8000
-start "TruckGrad API" cmd /k "cd /d %BACKEND% && python -m uvicorn app.main:app --host 127.0.0.1 --port 8000"
+start "TruckGrad API" cmd /k "cd /d %BACKEND% && python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
 
 timeout /t 3 /nobreak >nul
 

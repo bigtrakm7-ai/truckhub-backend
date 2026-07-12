@@ -7,12 +7,15 @@
 `.env` и `.env.production`:
 
 ```env
+# Локальная разработка (вариант C — без Render)
 VITE_API_BASE_URL=http://127.0.0.1:8000
 VITE_APP_NAME=TruckGrad
-VITE_SITE_URL=https://truckgrad.ru
+VITE_SITE_URL=http://127.0.0.1:3023
 ```
 
-На Vercel (Production):
+Скопируйте `scripts/frontend.env.local.example` в `frontend/.env.local`.
+
+На Vercel (только когда API снова будет в проде):
 
 ```env
 VITE_API_BASE_URL=https://truckhub-api.onrender.com
