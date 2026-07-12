@@ -95,3 +95,49 @@ railway domain
 ## Готово!
 
 TruckGrad полностью работает в интернете.
+
+---
+
+## Деплой на Render (truckgrad.ru)
+
+### Если сервис `truckhub-api` приостановлен
+
+1. Откройте https://dashboard.render.com
+2. Найдите сервис **truckhub-api** (или Web Service с этим URL)
+3. Нажмите **Resume service** / **Restore** (на бесплатном плане сервис «засыпает» и может быть отключён)
+4. Если восстановить нельзя — **New + Web Service** → подключите репозиторий `truckgrad-backend`
+
+### Настройки Web Service
+
+| Поле | Значение |
+|------|----------|
+| **Build Command** | `pip install -r requirements.txt` |
+| **Start Command** | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| **Python Version** | 3.11+ |
+
+### Переменные окружения (Environment)
+
+| Key | Value |
+|-----|-------|
+| `ENV` | `production` |
+| `SECRET_KEY` | случайная строка (32+ символа) |
+| `DATABASE_URL` | из Render PostgreSQL (Internal Database URL) |
+| `CORS_ORIGINS` | `https://truckgrad.ru,https://www.truckgrad.ru,https://truckhub-frontend-phi.vercel.app` |
+| `PROVIDER_MODE` | `mock` (пока без реальных ключей интеграций) |
+
+### PostgreSQL на Render
+
+1. **New + PostgreSQL** → имя `truckgrad-db`
+2. Скопируйте **Internal Database URL** в `DATABASE_URL` web-сервиса
+3. В `requirements.txt` должен быть пакет `asyncpg` (для async PostgreSQL)
+
+### После деплоя
+
+1. Проверьте: `https://ВАШ-СЕРВИС.onrender.com/health` → `"status": "работает"`
+2. В **Vercel** (frontend) обновите:
+   - `VITE_API_BASE_URL` = URL вашего Render API
+3. **Redeploy** frontend на Vercel
+
+### Переименование на Render (по желанию)
+
+Settings → Name → `truckgrad-api` (URL `.onrender.com` может остаться старым, пока не создадите новый сервис)
